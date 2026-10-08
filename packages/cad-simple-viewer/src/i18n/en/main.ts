@@ -122,7 +122,7 @@ export default {
   about: {
     title: 'About',
     close: 'Close',
-    product: 'CAD Viewer',
+    product: 'Aitra CadViewer',
     tagline: 'High-performance web CAD viewer for DWG and DXF drawings.',
     website: 'Website',
     docs: 'Documentation',

@@ -120,7 +120,7 @@ export default {
   about: {
     title: 'حول',
     close: 'إغلاق',
-    product: 'عارض CAD',
+    product: 'Aitra CadViewer',
     tagline: 'عارض CAD عالي الأداء للويب لملفات DWG وDXF.',
     website: 'الموقع الإلكتروني',
     docs: 'التوثيق',
