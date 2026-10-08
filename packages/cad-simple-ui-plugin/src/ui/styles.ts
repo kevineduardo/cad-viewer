@@ -668,6 +668,15 @@ export function acuiEnsureUiStyles() {
       background: var(--ml-ui-accent-soft, rgba(64, 158, 255, 0.12));
     }
 
+    .ml-ex-ui-find-layout {
+      color: var(--ml-ui-text-muted, #606266);
+      font-size: 11px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .ml-ex-ui-find-text {
       overflow: hidden;
       text-overflow: ellipsis;
