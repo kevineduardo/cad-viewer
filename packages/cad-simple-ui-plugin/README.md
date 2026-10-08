@@ -15,6 +15,7 @@ This plugin provides ready-to-use CAD viewer chrome without Vue, React, or Eleme
 - Locale follows `AcApI18n.currentLocale` automatically
 - Layer list in a dock panel tab (name, visibility, color), opened from the toolbar layer button
 - Review palette in a dock panel tab (markup list, status, comments), opened from the Review toolbar button (`markuppanel`)
+- Text search (**Find**) in a dock panel tab: TEXT, MTEXT and block attributes of the active layout, click-to-zoom with selection, opened from the Find toolbar button (`find`)
 - Chrome DevTools-style **dock panel** with tabs, open/close, dock side (bottom/left/right), and resize handle
 - ACI color picker for layer colors
 - Layer UI opens from the toolbar button or the `layer` command (opens dock when closed, switches to layers tab when open)
@@ -183,6 +184,43 @@ Review palette behavior:
 - Open or focus the palette via `AcApDocManager.sendStringToExecute('markuppanel')`
 - Row click selects the markup overlay and opens the details pane
 - Status, label, and comment edits go through `runMarkupEdit` so they stay on the undo stack
+
+### Find text (dock panel)
+
+The Find tab is enabled automatically when the resolved toolbar includes the Find button (`id: 'find'`, in the default desktop/pad toolbar after Zoom and in the phone toolbar). Remove it with `excludeItems: ['find']`. It is a plain DOM view (no Vue) that searches the **active layout** (model space or the current paper-space layout) when the user submits a query.
+
+```typescript
+acuiCreateSimpleUiPlugin({ host }) // Find button included by default
+// or: toolbar: { items: [acuiToolbarPreset('find')] }
+```
+
+Searched fields:
+
+| Entity | Field | Notes |
+| --- | --- | --- |
+| `TEXT` | `textString` | `%%c` `%%d` `%%p` decoded |
+| `MTEXT` | `contents` | formatting codes (`\f…;`, `\H…;`, `\C…;`, `\L`, braces…) removed, `\P` → space, `\U+XXXX` and stacks decoded |
+| `ATTRIB` | attribute value of every `INSERT` | block name and tag are shown in the result label (not searched); invisible attributes are skipped |
+
+Matching:
+
+- Partial (substring) match; the query is trimmed and runs of whitespace collapse to one space
+- Default: case-, accent- and width-insensitive (`instalacao` finds `Instalação`, NFKC + diacritics removed)
+- **Match case** checkbox: exact case and accents
+- Blank query → no search; at most 500 results (a "first N results" notice is shown when truncated)
+- Entities that are hidden or on an off/frozen layer are skipped, so every result is something you can see
+
+Usage:
+
+- Search runs only on **Enter** / the Find button (never while typing, never in the background). The scan is a single synchronous pass over the active layout's top-level entities; nothing is cached or stored globally
+- Each result shows the matched text, type (Text / MText / Attribute + block / tag), layer and `(x, y)`
+- Click a result (or press Enter / Shift+Enter in the field to step through them) to zoom to the text and select its entity (attributes select their `INSERT`). Selection uses the normal selection set/highlight, so Escape or clicking elsewhere clears it. Pan, wheel/pinch zoom, layers and touch handling are untouched
+- If the active layout changed since the search, clicking a result re-runs the search for the new layout instead of navigating
+- Open with the toolbar button, the `find` command (`AcApDocManager.sendStringToExecute('find')`) or `plugin.toggleDockPanelTab('find')`
+
+Limitations: text inside block definitions (other than attributes), dimension text, leaders, tables, fields and xref content is not searched; only the active layout is searched (switch layout and search again); no regex / whole-word / replace; selection highlight requires entity selection to be enabled on the view (it is by default); on phone the dock panel covers part of the canvas.
+
+Demo / verification: `__tests__/fixtures/find-text.dxf` is a fictitious drawing (Portuguese labels, an MTEXT with formatting, an attribute, an off layer). `__tests__/e2e/find-text.e2e.mjs` drives `cad-simple-viewer-example` with it in Chromium (see the file header for usage).
 
 ### Collapsible toolbar
 
