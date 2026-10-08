@@ -1,11 +1,13 @@
-import { AcApDocManager } from '@mlightcad/cad-simple-viewer'
-import { AcGeBox2d, AcGePoint2d } from '@mlightcad/data-model'
+import {
+  type AcApDocManager,
+  acapNavigateToFindHit
+} from '@mlightcad/cad-simple-viewer'
 
 import {
   acuiFindExcerpt,
-  type AcUiFindHit,
-  type AcUiFindResult,
-  acuiFindTextInLayout
+  type AcUiFindLayoutHit,
+  type AcUiFindScope,
+  acuiFindText
 } from '../find/findText'
 import type { AcUiI18n } from '../i18n'
 import { acuiEnsureUiStyles } from './styles'
@@ -21,10 +23,13 @@ export interface AcUiFindPaletteViewOptions {
 /**
  * Text search view for the dock panel (FIND).
  *
- * Searches TEXT, MTEXT and block attribute values of the **active layout**
- * when the user submits a query (Enter or the Find button) — never while
- * typing and never in the background. Clicking a result (or Enter / Shift+Enter
- * in the input to step through them) zooms to the text and selects its entity.
+ * Searches TEXT, MTEXT and block attribute values of the **whole drawing**
+ * (every layout) by default, or only the active layout when "Current layout
+ * only" is checked. The search runs when the user submits a query (Enter or the
+ * Find button) — never while typing and never in the background. Each result
+ * names its layout; clicking a result (or Enter / Shift+Enter in the input to
+ * step through them) activates that layout if needed, zooms to the text and
+ * selects its entity.
  */
 export class AcUiFindPaletteView {
   /** Root element mounted in the dock panel find tab. */
@@ -33,17 +38,29 @@ export class AcUiFindPaletteView {
   private findButton!: HTMLButtonElement
   private matchCaseEl!: HTMLInputElement
   private matchCaseLabelEl!: HTMLLabelElement
+  private layoutOnlyEl!: HTMLInputElement
+  private layoutOnlyLabelEl!: HTMLLabelElement
   private statusEl!: HTMLDivElement
   private listEl!: HTMLUListElement
   private readonly editor: AcApDocManager
   private readonly i18n: AcUiI18n
   /** Hits of the last search. */
-  private result: AcUiFindResult = { hits: [], truncated: false }
-  /** Query and layout used for the last search. */
-  private searched?: { query: string; matchCase: boolean; layoutId: string }
+  private result: { hits: AcUiFindLayoutHit[]; truncated: boolean } = {
+    hits: [],
+    truncated: false
+  }
+  /** Query, options and active layout used for the last search. */
+  private searched?: {
+    query: string
+    matchCase: boolean
+    scope: AcUiFindScope
+    layoutId: string
+  }
   /** Index of the hit last navigated to. */
   private activeIndex = -1
   private searchState: 'idle' | 'done' | 'no-document' = 'idle'
+  /** Set when the last navigation could not open the hit's layout. */
+  private navigationNote = ''
 
   constructor(options: AcUiFindPaletteViewOptions) {
     this.editor = options.editor
@@ -64,6 +81,9 @@ export class AcUiFindPaletteView {
     this.matchCaseLabelEl.lastChild!.textContent = this.i18n.t(
       'findPalette.matchCase'
     )
+    this.layoutOnlyLabelEl.lastChild!.textContent = this.i18n.t(
+      'findPalette.currentLayoutOnly'
+    )
     this.renderResults()
   }
 
@@ -73,16 +93,31 @@ export class AcUiFindPaletteView {
     this.inputEl.select()
   }
 
-  /** Runs a search programmatically (used by tests and integrations). */
-  search(query: string, matchCase = this.matchCaseEl.checked) {
+  /**
+   * Runs a search programmatically (used by tests and integrations).
+   *
+   * @param scope - `drawing` (default: all layouts) or `layout` (active layout
+   * only); defaults to the state of the "Current layout only" checkbox.
+   */
+  search(
+    query: string,
+    matchCase = this.matchCaseEl.checked,
+    scope: AcUiFindScope = this.scope
+  ) {
     this.inputEl.value = query
     this.matchCaseEl.checked = matchCase
+    this.layoutOnlyEl.checked = scope === 'layout'
     this.runSearch()
   }
 
   /** Hits of the last search. */
-  get hits(): readonly AcUiFindHit[] {
+  get hits(): readonly AcUiFindLayoutHit[] {
     return this.result.hits
+  }
+
+  /** Scope selected in the panel. */
+  get scope(): AcUiFindScope {
+    return this.layoutOnlyEl.checked ? 'layout' : 'drawing'
   }
 
   /** Nothing to unsubscribe; kept for symmetry with the other palettes. */
@@ -123,6 +158,20 @@ export class AcUiFindPaletteView {
     })
     this.matchCaseLabelEl.append(this.matchCaseEl, document.createTextNode(''))
 
+    this.layoutOnlyLabelEl = document.createElement('label')
+    this.layoutOnlyLabelEl.className = 'ml-ex-ui-find-option'
+    this.layoutOnlyEl = document.createElement('input')
+    this.layoutOnlyEl.type = 'checkbox'
+    this.layoutOnlyEl.dataset.findScope = 'layout'
+    this.layoutOnlyEl.addEventListener('change', () => {
+      if (this.searched) this.runSearch()
+      else this.renderResults()
+    })
+    this.layoutOnlyLabelEl.append(
+      this.layoutOnlyEl,
+      document.createTextNode('')
+    )
+
     this.statusEl = document.createElement('div')
     this.statusEl.className = 'ml-ex-ui-find-status'
     this.statusEl.setAttribute('role', 'status')
@@ -138,7 +187,13 @@ export class AcUiFindPaletteView {
       this.navigateTo(Number(row.dataset.findIndex))
     })
 
-    this.element.append(form, this.matchCaseLabelEl, this.statusEl, this.listEl)
+    this.element.append(
+      form,
+      this.matchCaseLabelEl,
+      this.layoutOnlyLabelEl,
+      this.statusEl,
+      this.listEl
+    )
   }
 
   private handleEnter(backwards: boolean) {
@@ -146,7 +201,8 @@ export class AcUiFindPaletteView {
     const same =
       this.searched &&
       this.searched.query === query &&
-      this.searched.matchCase === this.matchCaseEl.checked
+      this.searched.matchCase === this.matchCaseEl.checked &&
+      this.searched.scope === this.scope
     if (!same || this.result.hits.length === 0) {
       this.runSearch()
       if (this.result.hits.length > 0) this.navigateTo(0)
@@ -160,12 +216,13 @@ export class AcUiFindPaletteView {
     this.navigateTo(next)
   }
 
-  /** Searches the active layout of the current document. */
+  /** Searches the whole drawing, or the active layout only (scope option). */
   private runSearch() {
     const view = this.editor.curView
     const db = this.editor.curDocument?.database
     const query = this.inputEl.value
     this.activeIndex = -1
+    this.navigationNote = ''
     if (!view || !db || !query.trim()) {
       this.result = { hits: [], truncated: false }
       this.searched = undefined
@@ -175,8 +232,13 @@ export class AcUiFindPaletteView {
     }
     const layoutId = view.activeLayoutBtrId
     const matchCase = this.matchCaseEl.checked
-    this.result = acuiFindTextInLayout(db, layoutId, query, { matchCase })
-    this.searched = { query, matchCase, layoutId }
+    const scope = this.scope
+    this.result = acuiFindText(db, query, {
+      matchCase,
+      scope,
+      currentLayoutId: layoutId
+    })
+    this.searched = { query, matchCase, scope, layoutId }
     this.searchState = 'done'
     this.renderResults()
   }
@@ -189,17 +251,26 @@ export class AcUiFindPaletteView {
       return
     }
     if (this.searchState === 'idle') {
-      this.statusEl.textContent = this.i18n.t('findPalette.hint')
+      this.statusEl.textContent = this.i18n.t(
+        this.scope === 'layout' ? 'findPalette.hintLayout' : 'findPalette.hint'
+      )
       return
     }
     if (hits.length === 0) {
       this.statusEl.textContent = this.i18n.t('findPalette.noResults')
       return
     }
+    const layoutCount = new Set(hits.map(hit => hit.layoutId)).size
     const key = this.result.truncated
       ? 'findPalette.countTruncated'
-      : 'findPalette.count'
-    this.statusEl.textContent = this.i18n.t(key, { count: String(hits.length) })
+      : layoutCount > 1
+        ? 'findPalette.countLayouts'
+        : 'findPalette.count'
+    this.statusEl.textContent =
+      this.i18n.t(key, {
+        count: String(hits.length),
+        layouts: String(layoutCount)
+      }) + (this.navigationNote ? ` — ${this.navigationNote}` : '')
 
     const query = this.searched?.query ?? ''
     const matchCase = this.searched?.matchCase ?? false
@@ -216,6 +287,12 @@ export class AcUiFindPaletteView {
       })
       if (index === this.activeIndex) li.classList.add('is-selected')
 
+      const layout = document.createElement('div')
+      layout.className = 'ml-ex-ui-find-layout'
+      layout.dataset.layoutId = hit.layoutId
+      layout.textContent = hit.layoutName
+      layout.title = hit.layoutName
+
       const text = document.createElement('div')
       text.className = 'ml-ex-ui-find-text'
       text.textContent = acuiFindExcerpt(hit.text, query, matchCase)
@@ -225,13 +302,13 @@ export class AcUiFindPaletteView {
       meta.className = 'ml-ex-ui-find-meta'
       meta.textContent = this.describeHit(hit)
 
-      li.append(text, meta)
+      li.append(layout, text, meta)
       this.listEl.appendChild(li)
     })
   }
 
   /** `Type · layer · (x, y)` label for a hit. */
-  private describeHit(hit: AcUiFindHit): string {
+  private describeHit(hit: AcUiFindLayoutHit): string {
     let kind = this.i18n.t(`findPalette.kind.${hit.kind}`)
     if (hit.kind === 'attribute') {
       const owner = [hit.blockName, hit.tag].filter(Boolean).join(' / ')
@@ -241,25 +318,28 @@ export class AcUiFindPaletteView {
     return `${kind} · ${hit.layer} · ${at}`
   }
 
-  /** Zooms to the hit and selects its entity. */
+  /**
+   * Activates the hit's layout when needed, zooms to the hit and selects its
+   * entity (see {@link acapNavigateToFindHit}).
+   */
   private navigateTo(index: number) {
     const view = this.editor.curView
     const db = this.editor.curDocument?.database
     const hit = this.result.hits[index]
     if (!view || !db || !hit || !this.searched) return
 
-    // The layout changed since the search: results no longer apply.
-    if (view.activeLayoutBtrId !== this.searched.layoutId) {
+    // Current-layout scope only: the layout changed since the search, so the
+    // results no longer apply. (Drawing-wide results stay valid.)
+    if (
+      this.searched.scope === 'layout' &&
+      view.activeLayoutBtrId !== this.searched.layoutId
+    ) {
       this.runSearch()
       return
     }
 
     this.activeIndex = index
-    const box = this.hitBox(hit, db)
-    if (box) view.zoomTo(box, 1.1)
-    view.selectionSet.clear()
-    view.selectionSet.add(hit.entityId)
-
+    this.navigationNote = ''
     this.listEl
       .querySelectorAll<HTMLElement>('li[data-find-index]')
       .forEach(row => {
@@ -267,61 +347,22 @@ export class AcUiFindPaletteView {
         row.classList.toggle('is-selected', active)
         if (active) row.scrollIntoView?.({ block: 'nearest' })
       })
-  }
 
-  /**
-   * View box for a hit: the text extents, widened so a short label does not
-   * zoom in absurdly far (at least ~10 text heights wide).
-   */
-  private hitBox(
-    hit: AcUiFindHit,
-    db: NonNullable<AcApDocManager['curDocument']>['database']
-  ): AcGeBox2d | undefined {
-    const btr = db.tables.blockTable.getIdAt(this.searched!.layoutId)
-    const owner = btr?.getIdAt(hit.entityId)
-    let target: { geometricExtents: { min: XY; max: XY } } | undefined =
-      owner as unknown as { geometricExtents: { min: XY; max: XY } } | undefined
-    const withAttributes = owner as unknown as
-      | {
-          attributeIterator?: () => Iterable<
-            NonNullable<typeof target> & { objectId: string }
-          >
-        }
-      | undefined
-    if (hit.kind === 'attribute' && withAttributes?.attributeIterator) {
-      for (const attribute of withAttributes.attributeIterator()) {
-        if (attribute.objectId === hit.textEntityId) {
-          target = attribute
-          break
-        }
+    void acapNavigateToFindHit(this.editor, hit).then(outcome => {
+      if (
+        outcome !== 'layout-missing' &&
+        outcome !== 'layout-switch-failed' &&
+        outcome !== 'layout-mismatch'
+      ) {
+        return
       }
-    }
-    let min: XY
-    let max: XY
-    try {
-      const extents = target?.geometricExtents
-      if (!extents || !isFinite(extents.min.x) || !isFinite(extents.max.x)) {
-        throw new Error('no extents')
-      }
-      min = extents.min
-      max = extents.max
-    } catch {
-      min = max = hit.position
-    }
-    const cx = (min.x + max.x) / 2
-    const cy = (min.y + max.y) / 2
-    const w = max.x - min.x
-    const h = max.y - min.y
-    const width = Math.max(w * 3, h * 10, 1e-3)
-    const height = Math.max(h * 3, width / 4, 1e-3)
-    return new AcGeBox2d(
-      new AcGePoint2d(cx - width / 2, cy - height / 2),
-      new AcGePoint2d(cx + width / 2, cy + height / 2)
-    )
+      this.navigationNote = this.i18n.t('findPalette.layoutUnavailable', {
+        layout: hit.layoutName
+      })
+      this.renderResults()
+    })
   }
 }
-
-type XY = { x: number; y: number }
 
 function round(value: number): string {
   return String(Math.round(value * 100) / 100)
