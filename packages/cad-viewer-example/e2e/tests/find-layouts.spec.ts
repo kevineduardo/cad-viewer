@@ -1,6 +1,7 @@
-import { expect, test, type Page } from '@playwright/test'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import { expect, type Page,test } from '@playwright/test'
 
 import { uploadFixture } from '../helpers/fileUpload'
 
