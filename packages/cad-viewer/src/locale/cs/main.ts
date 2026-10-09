@@ -745,7 +745,11 @@ export default {
       kind: {
         text: 'Text',
         mtext: 'Mtext',
-        attribute: 'Atribut'
+        attribute: 'Atribut',
+        block: 'Text bloku',
+        dimension: 'Kóta',
+        leader: 'Odkaz',
+        table: 'Tabulka'
       }
     },
     countList: {

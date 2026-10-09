@@ -5,15 +5,25 @@
  * both behave identically. Pure TypeScript with no runtime imports, published
  * as the `@mlightcad/cad-simple-viewer/find` subpath.
  *
- * Searched fields (see the cad-simple-ui-plugin `README.md` → "Find text"):
+ * Searched fields:
  * - `TEXT` — `textString`
  * - `MTEXT` — `contents` with MTEXT formatting codes removed
  * - `ATTRIB` — attribute value (`textString`) of every `INSERT` in the layout
  *   (the tag is reported for display but is not searched)
+ * - `TEXT` / `MTEXT` / `ATTRIB` inside the block definition of every `INSERT`
+ *   (nested blocks included, anonymous/dynamic blocks too): title blocks,
+ *   legends and labels are usually drawn this way
+ * - `DIMENSION` — the displayed text (from the dimension block when present,
+ *   otherwise the override text)
+ * - `MULTILEADER` — its MTEXT contents
+ * - `ACAD_TABLE` — the cell text (from the table block when present,
+ *   otherwise the cell strings)
  *
- * Only top-level entities of the given block table record are visited, in one
- * synchronous pass per search. Text inside block definitions (non-attribute),
- * dimension text, leaders, tables and xrefs is not searched.
+ * Every layout is visited in one synchronous pass per search. A hit inside a
+ * block, dimension or table selects the top-level entity of the layout that
+ * contains it, and carries the WCS extents of the matched text so the view
+ * can zoom to the text itself instead of to the whole block. Xrefs are not
+ * searched.
  *
  * The module is structural (no `instanceof`) so it can be unit tested with
  * plain objects.
@@ -23,7 +33,15 @@
 export const ACAP_FIND_MAX_RESULTS = 500
 
 /** Kind of entity that produced a hit. */
-export type AcApFindHitKind = 'text' | 'mtext' | 'attribute'
+export type AcApFindHitKind =
+  | 'text'
+  | 'mtext'
+  | 'attribute'
+  /** TEXT / MTEXT inside a block definition (via an `INSERT`). */
+  | 'block'
+  | 'dimension'
+  | 'leader'
+  | 'table'
 
 /** Options for {@link acapFindTextInLayout}. */
 export interface AcApFindOptions {
@@ -38,9 +56,17 @@ export interface AcApFindOptions {
 
 /** One match returned by {@link acapFindTextInLayout}. */
 export interface AcApFindHit {
-  /** Entity that is zoomed to and selected (the `INSERT` for attributes). */
+  /**
+   * Top-level entity of the layout that is selected (the `INSERT` for
+   * attributes and block text, the `DIMENSION` / `ACAD_TABLE` for their text).
+   */
   entityId: string
-  /** Entity that owns the matched text (the attribute itself for attributes). */
+  /**
+   * Key of the text that matched, unique within the layout: the entity id
+   * for top-level text, the attribute id for attributes, and
+   * `<entityId>/<nested id>…` for text found inside a block, dimension or
+   * table (the same block text appears once per `INSERT`).
+   */
   textEntityId: string
   kind: AcApFindHitKind
   /** Plain text that matched (formatting codes removed, whitespace collapsed). */
@@ -52,6 +78,11 @@ export interface AcApFindHit {
   layer: string
   /** Insertion point of the text in WCS. */
   position: { x: number; y: number }
+  /**
+   * WCS extents of the matched text, when known (text nested in a block,
+   * dimension or table). Used to zoom to the text itself.
+   */
+  extents?: { min: { x: number; y: number }; max: { x: number; y: number } }
 }
 
 /** Result of one search. */
@@ -69,6 +100,8 @@ type EntityLike = any
 export interface AcApFindDatabaseLike {
   tables: {
     blockTable: {
+      /** Block definition by name; used to search text inside blocks. */
+      getAt?(name: string): { newIterator(): Iterable<EntityLike> } | undefined
       getIdAt(id: string):
         | {
             newIterator(): Iterable<EntityLike>
@@ -158,8 +191,93 @@ function isLayerSearchable(
 }
 
 function pointOf(entity: EntityLike): { x: number; y: number } {
-  const p = entity.position ?? entity.location ?? { x: 0, y: 0 }
+  const p =
+    entity.position ??
+    entity.location ??
+    entity.textLocation ??
+    entity.textPosition ?? { x: 0, y: 0 }
   return { x: Number(p.x) || 0, y: Number(p.y) || 0 }
+}
+
+/** 4x4 affine matrix, column-major (`AcGeMatrix3d.elements` layout). */
+type Matrix = number[]
+
+/** `a × b` for column-major 4x4 matrices. */
+function multiply(a: Matrix, b: Matrix): Matrix {
+  const out = new Array<number>(16)
+  for (let col = 0; col < 4; col++) {
+    for (let row = 0; row < 4; row++) {
+      let sum = 0
+      for (let k = 0; k < 4; k++) sum += a[k * 4 + row] * b[col * 4 + k]
+      out[col * 4 + row] = sum
+    }
+  }
+  return out
+}
+
+function transformPoint(
+  m: Matrix | undefined,
+  p: { x: number; y: number; z?: number }
+): { x: number; y: number } {
+  if (!m) return { x: p.x, y: p.y }
+  const z = Number(p.z) || 0
+  return {
+    x: m[0] * p.x + m[4] * p.y + m[8] * z + m[12],
+    y: m[1] * p.x + m[5] * p.y + m[9] * z + m[13]
+  }
+}
+
+function matrixOf(entity: EntityLike): Matrix | undefined {
+  try {
+    const elements = entity.blockTransform?.elements
+    return Array.isArray(elements) && elements.length === 16
+      ? (elements as number[])
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** WCS box of a (possibly nested) entity, or undefined when unknown. */
+function extentsOf(
+  entity: EntityLike,
+  m: Matrix | undefined
+): AcApFindHit['extents'] {
+  let box: { min: { x: number; y: number }; max: { x: number; y: number } }
+  try {
+    box = entity.geometricExtents
+  } catch {
+    return undefined
+  }
+  if (!box || !isFinite(box.min?.x) || !isFinite(box.max?.x)) return undefined
+  if (!m) return { min: { ...box.min }, max: { ...box.max } }
+  const corners = [
+    { x: box.min.x, y: box.min.y },
+    { x: box.max.x, y: box.min.y },
+    { x: box.min.x, y: box.max.y },
+    { x: box.max.x, y: box.max.y }
+  ].map(p => transformPoint(m, p))
+  return {
+    min: {
+      x: Math.min(...corners.map(p => p.x)),
+      y: Math.min(...corners.map(p => p.y))
+    },
+    max: {
+      x: Math.max(...corners.map(p => p.x)),
+      y: Math.max(...corners.map(p => p.y))
+    }
+  }
+}
+
+/** Maximum nesting of blocks inside blocks that is searched. */
+const MAX_BLOCK_DEPTH = 8
+
+/** Top-level entity of the layout that owns nested text. */
+interface Owner {
+  entity: EntityLike
+  kind: Extract<AcApFindHitKind, 'block' | 'dimension' | 'table'>
+  /** Effective layer of the owner (layer `0` entities inherit it). */
+  layer: string
 }
 
 /**
@@ -190,30 +308,147 @@ export function acapFindTextInLayout(
   const layers = new Map<string, boolean>()
   const matches = (text: string) =>
     text !== '' && acapNormalizeFindText(text, matchCase).includes(needle)
+  /** Set once the result cap is exceeded; stops every loop. */
+  let full = false
 
-  const push = (hit: AcApFindHit): boolean => {
+  const push = (hit: AcApFindHit) => {
     if (result.hits.length >= max) {
       result.truncated = true
-      return false
+      full = true
+      return
     }
     result.hits.push(hit)
-    return true
+  }
+
+  /**
+   * Hit for text nested in `owner` (block, dimension or table). `path` keeps
+   * the key unique when the same block is inserted several times.
+   */
+  const pushNested = (
+    owner: Owner,
+    path: string,
+    entity: EntityLike,
+    kind: AcApFindHitKind,
+    text: string,
+    m: Matrix | undefined,
+    extra: Partial<AcApFindHit> = {}
+  ) => {
+    const extents = extentsOf(entity, m)
+    push({
+      entityId: owner.entity.objectId,
+      textEntityId: `${path}/${entity.objectId}`,
+      kind,
+      text,
+      layer: owner.layer,
+      position: transformPoint(m, pointOf(entity)),
+      ...(extents ? { extents } : {}),
+      ...extra
+    })
+  }
+
+  /** Searches the entities of a block definition drawn by `owner`. */
+  const visitBlock = (
+    entities: Iterable<EntityLike>,
+    owner: Owner,
+    m: Matrix | undefined,
+    path: string,
+    depth: number,
+    stack: Set<string>
+  ) => {
+    for (const entity of entities) {
+      if (full) return
+      const type: string | undefined = entity.dxfTypeName
+      if (
+        type !== 'TEXT' &&
+        type !== 'MTEXT' &&
+        type !== 'INSERT' &&
+        type !== 'ATTRIB'
+      ) {
+        continue
+      }
+      if (entity.visibility === false) continue
+      // Layer 0 inside a block inherits the owner's layer (already checked).
+      if (
+        entity.layer &&
+        entity.layer !== '0' &&
+        !isLayerSearchable(db, entity.layer, layers)
+      ) {
+        continue
+      }
+      if (type === 'INSERT') {
+        if (depth >= MAX_BLOCK_DEPTH) continue
+        const inner = matrixOf(entity)
+        const nested = m && inner ? multiply(m, inner) : (inner ?? m)
+        const nestedPath = `${path}/${entity.objectId}`
+        for (const attribute of entity.attributeIterator?.() ?? []) {
+          if (full) return
+          if (attribute.visibility === false || attribute.isInvisible) continue
+          const text = plainText(attribute.textString)
+          if (!matches(text)) continue
+          // Attributes are stored in the coordinates of the block that holds
+          // the nested INSERT, like the INSERT itself.
+          pushNested(owner, nestedPath, attribute, 'block', text, m, {
+            tag: attribute.tag,
+            blockName: entity.blockName
+          })
+        }
+        const name: string | undefined = entity.blockName
+        if (!name || stack.has(name)) continue
+        const def = db.tables.blockTable.getAt?.(name)
+        if (!def) continue
+        stack.add(name)
+        visitBlock(def.newIterator(), owner, nested, nestedPath, depth + 1, stack)
+        stack.delete(name)
+        continue
+      }
+      const text =
+        type === 'MTEXT'
+          ? acapMTextToPlainText(String(entity.contents ?? ''))
+          : plainText(entity.textString)
+      if (!matches(text)) continue
+      pushNested(owner, path, entity, owner.kind, text, m)
+    }
+  }
+
+  /** Block definition drawn by a DIMENSION / ACAD_TABLE, when present. */
+  const ownBlock = (entity: EntityLike) => {
+    try {
+      // ACAD_TABLE resolves its anonymous block itself.
+      const table = entity.blockTableRecord
+      if (table?.newIterator) return table as { newIterator(): Iterable<EntityLike> }
+      const id = entity.dimBlockId
+      const byId = id ? db.tables.blockTable.getIdAt(id) : undefined
+      if (byId) return byId
+      const name = entity.blockName
+      return name ? db.tables.blockTable.getAt?.(name) : undefined
+    } catch {
+      return undefined
+    }
   }
 
   for (const entity of btr.newIterator()) {
+    if (full) break
     const type: string | undefined = entity.dxfTypeName
-    if (type !== 'TEXT' && type !== 'MTEXT' && type !== 'INSERT') continue
+    if (
+      type !== 'TEXT' &&
+      type !== 'MTEXT' &&
+      type !== 'INSERT' &&
+      type !== 'DIMENSION' &&
+      type !== 'MULTILEADER' &&
+      type !== 'ACAD_TABLE'
+    ) {
+      continue
+    }
     if (entity.visibility === false) continue
     if (!isLayerSearchable(db, entity.layer, layers)) continue
 
     if (type === 'INSERT') {
-      const attributes = entity.attributeIterator?.()
-      if (!attributes) continue
-      for (const attribute of attributes) {
+      for (const attribute of entity.attributeIterator?.() ?? []) {
+        if (full) break
         if (attribute.visibility === false || attribute.isInvisible) continue
         const text = plainText(attribute.textString)
         if (!matches(text)) continue
-        const ok = push({
+        push({
           entityId: entity.objectId,
           textEntityId: attribute.objectId,
           kind: 'attribute',
@@ -223,25 +458,90 @@ export function acapFindTextInLayout(
           layer: entity.layer,
           position: pointOf(attribute)
         })
-        if (!ok) return result
+      }
+      const name: string | undefined = entity.blockName
+      const def = name ? db.tables.blockTable.getAt?.(name) : undefined
+      if (def && !full) {
+        visitBlock(
+          def.newIterator(),
+          { entity, kind: 'block', layer: entity.layer },
+          matrixOf(entity),
+          String(entity.objectId),
+          1,
+          new Set([name as string])
+        )
+      }
+      continue
+    }
+
+    if (type === 'DIMENSION' || type === 'ACAD_TABLE') {
+      const kind = type === 'DIMENSION' ? 'dimension' : 'table'
+      const owner: Owner = { entity, kind, layer: entity.layer }
+      const block = ownBlock(entity)
+      const before = result.hits.length
+      if (block) {
+        // Dimension / table blocks are already in WCS.
+        visitBlock(
+          block.newIterator(),
+          owner,
+          undefined,
+          String(entity.objectId),
+          1,
+          new Set()
+        )
+      }
+      if (block && result.hits.length > before) continue
+      if (block && type === 'DIMENSION') continue
+      // No block (or a table block without text): use the stored strings.
+      const texts: string[] = []
+      if (type === 'DIMENSION') {
+        const override = String(entity.dimensionText ?? '')
+        if (override && override !== '<>' && override !== ' ') {
+          texts.push(acapMTextToPlainText(override.replace('<>', '')))
+        }
+      } else {
+        const rows = Number(entity.numRows) || 0
+        const cols = Number(entity.numColumns) || 0
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            try {
+              texts.push(
+                acapMTextToPlainText(String(entity.textString?.(r, c) ?? ''))
+              )
+            } catch {
+              // Cell without text content.
+            }
+          }
+        }
+      }
+      for (const text of texts) {
+        if (full) break
+        if (!matches(text)) continue
+        push({
+          entityId: entity.objectId,
+          textEntityId: `${entity.objectId}/${result.hits.length}`,
+          kind,
+          text,
+          layer: entity.layer,
+          position: pointOf(entity)
+        })
       }
       continue
     }
 
     const text =
-      type === 'MTEXT'
+      type === 'MTEXT' || type === 'MULTILEADER'
         ? acapMTextToPlainText(String(entity.contents ?? ''))
         : plainText(entity.textString)
     if (!matches(text)) continue
-    const ok = push({
+    push({
       entityId: entity.objectId,
       textEntityId: entity.objectId,
-      kind: type === 'MTEXT' ? 'mtext' : 'text',
+      kind: type === 'MTEXT' ? 'mtext' : type === 'MULTILEADER' ? 'leader' : 'text',
       text,
       layer: entity.layer,
       position: pointOf(entity)
     })
-    if (!ok) return result
   }
   return result
 }

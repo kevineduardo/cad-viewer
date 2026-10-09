@@ -22,6 +22,92 @@ export interface AcApFindNavigateOptions {
    * converting before zooming and selecting. Default 15000.
    */
   idleTimeoutMs?: number
+  /**
+   * Canvas area (CSS pixels from each edge) covered by UI such as a docked
+   * palette. The hit is framed and centred in the remaining visible part of
+   * the canvas so it never ends up hidden behind the palette.
+   */
+  insets?: AcApFindViewInsets
+}
+
+/** Pixels of the canvas covered on each side; see {@link AcApFindNavigateOptions.insets}. */
+export interface AcApFindViewInsets {
+  left?: number
+  right?: number
+  top?: number
+  bottom?: number
+}
+
+/** View methods used to keep the hit inside the uncovered canvas area. */
+interface InsetView {
+  width?: number
+  height?: number
+  center?: { x: number; y: number }
+  worldToScreen?(p: { x: number; y: number }): { x: number; y: number }
+  screenToWorld?(p: { x: number; y: number }): { x: number; y: number }
+}
+
+/**
+ * Zooms to `box` so that it fits, centred, in the part of the canvas that
+ * `insets` leaves visible. Falls back to a plain `zoomTo` when the view
+ * cannot convert coordinates or the visible part is too small to matter.
+ */
+function zoomToVisible(
+  view: InsetView & { zoomTo(box: AcGeBox2d, margin?: number): void },
+  box: { min: { x: number; y: number }; max: { x: number; y: number } },
+  margin: number,
+  insets: AcApFindViewInsets | undefined
+) {
+  const width = Number(view.width) || 0
+  const height = Number(view.height) || 0
+  const left = Math.max(0, insets?.left ?? 0)
+  const right = Math.max(0, insets?.right ?? 0)
+  const top = Math.max(0, insets?.top ?? 0)
+  const bottom = Math.max(0, insets?.bottom ?? 0)
+  const visibleW = width - left - right
+  const visibleH = height - top - bottom
+  const usable =
+    width > 0 &&
+    height > 0 &&
+    left + right + top + bottom > 0 &&
+    visibleW >= width * 0.2 &&
+    visibleH >= height * 0.2 &&
+    !!view.worldToScreen &&
+    !!view.screenToWorld
+  if (!usable) {
+    view.zoomTo(
+      new AcGeBox2d(
+        new AcGePoint2d(box.min.x, box.min.y),
+        new AcGePoint2d(box.max.x, box.max.y)
+      ),
+      margin
+    )
+    return
+  }
+  // Grow the box so that, fitted to the full canvas, its original part
+  // fits the visible part.
+  const cx = (box.min.x + box.max.x) / 2
+  const cy = (box.min.y + box.max.y) / 2
+  const halfW = ((box.max.x - box.min.x) / 2) * (width / visibleW)
+  const halfH = ((box.max.y - box.min.y) / 2) * (height / visibleH)
+  view.zoomTo(
+    new AcGeBox2d(
+      new AcGePoint2d(cx - halfW, cy - halfH),
+      new AcGePoint2d(cx + halfW, cy + halfH)
+    ),
+    margin
+  )
+  // Then pan so the hit sits in the middle of the visible part.
+  const hitOnScreen = view.worldToScreen!({ x: cx, y: cy })
+  const targetX = left + visibleW / 2
+  const targetY = top + visibleH / 2
+  const newCenter = view.screenToWorld!({
+    x: width / 2 + (hitOnScreen.x - targetX),
+    y: height / 2 + (hitOnScreen.y - targetY)
+  })
+  if (isFinite(newCenter.x) && isFinite(newCenter.y)) {
+    view.center = new AcGePoint2d(newCenter.x, newCenter.y)
+  }
 }
 
 /**
@@ -92,12 +178,11 @@ export async function acapNavigateToFindHit(
   }
 
   const box = acapFindHitBox(db, hit.layoutId, hit)
-  view.zoomTo(
-    new AcGeBox2d(
-      new AcGePoint2d(box.min.x, box.min.y),
-      new AcGePoint2d(box.max.x, box.max.y)
-    ),
-    options.margin ?? 1.1
+  zoomToVisible(
+    view as unknown as Parameters<typeof zoomToVisible>[0],
+    box,
+    options.margin ?? 1.1,
+    options.insets
   )
   view.selectionSet.clear()
   view.selectionSet.add(hit.entityId)

@@ -158,7 +158,7 @@ interface WithExtents {
 }
 
 /**
- * View box for a hit: the text extents, widened so a short label does not
+ * View box for a hit: the text extents (`hit.extents` for nested text), widened so a short label does not
  * zoom in absurdly far (at least ~10 text heights wide). Falls back to the
  * hit position when the entity has no usable extents.
  *
@@ -187,7 +187,9 @@ export function acapFindHitBox(
   let min: XY
   let max: XY
   try {
-    const extents = target?.geometricExtents
+    // Text nested in a block / dimension / table: the search already
+    // resolved its WCS extents (the owner's extents are the whole block).
+    const extents = hit.extents ?? target?.geometricExtents
     if (!extents || !isFinite(extents.min.x) || !isFinite(extents.max.x)) {
       throw new Error('no extents')
     }

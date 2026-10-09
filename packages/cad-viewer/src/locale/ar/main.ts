@@ -1059,7 +1059,11 @@ export default {
       kind: {
         text: 'نص',
         mtext: 'نص متعدد الأسطر',
-        attribute: 'سمة'
+        attribute: 'سمة',
+        block: 'نص كتلة',
+        dimension: 'بُعد',
+        leader: 'خط إشارة',
+        table: 'جدول'
       }
     },
     countList: {

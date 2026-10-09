@@ -3,6 +3,7 @@ import {
   type AcApFindLayoutHit,
   type AcApFindScope,
   acapFindText,
+  type AcApFindViewInsets,
   acapNavigateToFindHit
 } from '@mlightcad/cad-simple-viewer'
 import { computed, ref, shallowRef } from 'vue'
@@ -21,7 +22,16 @@ export type MlFindState = 'idle' | 'done' | 'no-document'
  * while typing. {@link MlFindApi.navigateTo} activates the hit's layout when
  * needed, then zooms to the text and selects its entity.
  */
-export function useFind(editor: AcApDocManager) {
+export function useFind(
+  editor: AcApDocManager,
+  options: {
+    /**
+     * Canvas pixels covered by the palette (or other UI) when navigating, so
+     * the hit is framed in the part of the drawing that stays visible.
+     */
+    getInsets?: () => AcApFindViewInsets | undefined
+  } = {}
+) {
   const query = ref('')
   const matchCase = ref(false)
   const currentLayoutOnly = ref(false)
@@ -112,7 +122,9 @@ export function useFind(editor: AcApDocManager) {
     }
     activeIndex.value = index
     unavailableLayout.value = ''
-    const outcome = await acapNavigateToFindHit(editor, hit)
+    const outcome = await acapNavigateToFindHit(editor, hit, {
+      insets: options.getInsets?.()
+    })
     if (
       outcome === 'layout-missing' ||
       outcome === 'layout-switch-failed' ||

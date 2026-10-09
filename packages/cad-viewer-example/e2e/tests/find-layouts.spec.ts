@@ -12,6 +12,14 @@ const fixturePath = path.resolve(
   'fixtures',
   'find-layouts.dxf'
 )
+/** find-layouts.dxf + block CARIMBO (plain TEXT, no attributes) inserted at
+ * (900, -200) with scale 2; its text "Projeto Escola Aitra" sits at (10, 5). */
+const blocksFixturePath = path.resolve(
+  currentDir,
+  '..',
+  'fixtures',
+  'find-blocks.dxf'
+)
 
 /** Layouts: Model (B*), Planta (C*), Alçados (D*). */
 let viewerModuleUrl: string | undefined
@@ -62,9 +70,9 @@ async function runCommand(page: Page, name: string) {
   await page.keyboard.press('Enter')
 }
 
-async function loadFixture(page: Page) {
+async function loadFixture(page: Page, file = fixturePath) {
   await page.goto('/')
-  await uploadFixture(page, fixturePath)
+  await uploadFixture(page, file)
   await expect(page.locator('.ml-cad-container')).toBeVisible({
     timeout: 30000
   })
@@ -74,8 +82,33 @@ async function loadFixture(page: Page) {
   await page.waitForTimeout(2500)
 }
 
-async function openFind(page: Page) {
-  await loadFixture(page)
+/** Page x of a WCS point, and the right edge of the docked palette. */
+async function screenXAndPaletteRight(
+  page: Page,
+  point: { x: number; y: number }
+) {
+  expect(viewerModuleUrl, 'viewer module url captured').toBeTruthy()
+  return page.evaluate(
+    async ({ url, point }) => {
+      const mod = await import(/* @vite-ignore */ url)
+      const view = mod.AcApDocManager.instance.curView
+      const canvas = view.canvas.getBoundingClientRect()
+      const palette = document
+        .querySelector('[data-testid="find-palette"]')!
+        .closest('.ml-tool-palette-dialog')!
+        .getBoundingClientRect()
+      return {
+        x: canvas.left + view.worldToScreen(point).x,
+        paletteRight: palette.right,
+        canvasRight: canvas.right
+      }
+    },
+    { url: viewerModuleUrl!, point }
+  )
+}
+
+async function openFind(page: Page, file = fixturePath) {
+  await loadFixture(page, file)
   await runCommand(page, 'find')
   await expect(page.getByTestId('find-palette')).toBeVisible()
 }
@@ -188,12 +221,17 @@ test.describe('Find palette (full Vue UI)', () => {
     await expect
       .poll(async () => (await viewerState(page)).selected)
       .toEqual(['C11'])
-    // "Legenda: Sala Técnica 01" sits at (40, 500) in paper space.
+    // "Legenda: Sala Técnica 01" sits at (40, 500) in paper space. The view
+    // is framed so the text lands beside the palette (not behind it), so the
+    // view centre is left of the text.
     const planta = await viewerState(page)
-    expect(planta.center[0]).toBeGreaterThan(40)
+    expect(planta.center[0]).toBeGreaterThan(-400)
     expect(planta.center[0]).toBeLessThan(400)
     expect(planta.center[1]).toBeGreaterThan(495)
     expect(planta.center[1]).toBeLessThan(515)
+    const legend = await screenXAndPaletteRight(page, { x: 40, y: 500 })
+    expect(legend.x).toBeGreaterThan(legend.paletteRight)
+    expect(legend.x).toBeLessThan(legend.canvasRight)
     await expect(
       page.locator('.ml-layout-tabs-button.el-button--primary')
     ).toHaveText('Planta')
@@ -235,5 +273,50 @@ test.describe('Find palette (full Vue UI)', () => {
     await expect
       .poll(async () => (await viewerState(page)).layout)
       .toBe('Planta')
+  })
+  test('Ctrl+F opens the palette instead of the browser page search', async ({
+    page
+  }) => {
+    await loadFixture(page)
+    await expect(page.getByTestId('find-palette')).toBeHidden()
+    await page.locator('.ml-cad-container canvas').first().click({
+      position: { x: 900, y: 300 }
+    })
+    await page.keyboard.press('Control+f')
+    await expect(page.getByTestId('find-palette')).toBeVisible()
+    await expect(input(page)).toBeFocused()
+  })
+
+  test('finds plain text inside a block and frames it beside the palette', async ({
+    page
+  }) => {
+    await openFind(page, blocksFixturePath)
+    await search(page, 'escola')
+    await expect(rows(page)).toHaveCount(1)
+    expect(await results(page)).toEqual(['Model | Projeto Escola Aitra'])
+    await expect(rows(page).first()).toContainText('Block text')
+
+    await rows(page).first().click()
+    await expect
+      .poll(async () => (await viewerState(page)).selected)
+      .toEqual(['F14'])
+    // Block text at (10, 5), height 4, inserted at (900, -200) scale 2.
+    const start = await screenXAndPaletteRight(page, { x: 920, y: -190 })
+    expect(start.x).toBeGreaterThan(start.paletteRight)
+    expect(start.x).toBeLessThan(start.canvasRight)
+  })
+
+  test('a hit in the active layout is framed beside the palette, not behind it', async ({
+    page
+  }) => {
+    await openFind(page)
+    await search(page, 'avac')
+    await rows(page).first().click()
+    await expect
+      .poll(async () => (await viewerState(page)).selected)
+      .toEqual(['B2'])
+    // "Instalação AVAC" starts at (0, 60).
+    const start = await screenXAndPaletteRight(page, { x: 0, y: 60 })
+    expect(start.x).toBeGreaterThan(start.paletteRight)
   })
 })

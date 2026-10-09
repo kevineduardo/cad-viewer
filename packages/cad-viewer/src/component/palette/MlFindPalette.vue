@@ -1,5 +1,5 @@
 <template>
-  <div class="ml-find-palette" data-testid="find-palette">
+  <div ref="rootRef" class="ml-find-palette" data-testid="find-palette">
     <div class="ml-find-form">
       <el-input
         ref="inputRef"
@@ -96,23 +96,61 @@ import { store } from '../../app'
 import { useFind } from '../../composable/useFind'
 
 const { t } = useI18n()
-const find = useFind(AcApDocManager.instance)
+const rootRef = ref<HTMLElement | null>(null)
+
+/**
+ * Canvas pixels covered by the palette, so a hit is framed in the part of
+ * the drawing that stays visible next to it (the palette floats over the
+ * canvas; without this the found text could sit right behind it).
+ */
+const paletteInsets = () => {
+  const canvas = AcApDocManager.instance.curView?.canvas as
+    | HTMLElement
+    | undefined
+  const palette = (rootRef.value?.closest('.ml-tool-palette-dialog') ??
+    rootRef.value?.closest('.ml-layer-manager') ??
+    rootRef.value) as HTMLElement | null
+  if (!canvas || !palette) return undefined
+  const c = canvas.getBoundingClientRect()
+  const p = palette.getBoundingClientRect()
+  const overlapsX = p.right > c.left && p.left < c.right
+  const overlapsY = p.bottom > c.top && p.top < c.bottom
+  if (!overlapsX || !overlapsY || p.width === 0) return undefined
+  // Docked on the side it is closest to.
+  return p.left + p.width / 2 < c.left + c.width / 2
+    ? { left: Math.min(c.width, p.right - c.left) }
+    : { right: Math.min(c.width, c.right - p.left) }
+}
+
+const find = useFind(AcApDocManager.instance, { getInsets: paletteInsets })
 const inputRef = ref<InstanceType<typeof ElInput> | null>(null)
 
 const round = (value: number) => String(Math.round(value * 100) / 100)
 
 /** Localized hit type (static keys: the i18n lint forbids dynamic ones). */
-const kindLabel = (kind: AcApFindLayoutHit['kind']) =>
-  kind === 'mtext'
-    ? t('main.toolPalette.find.kind.mtext')
-    : kind === 'attribute'
-      ? t('main.toolPalette.find.kind.attribute')
-      : t('main.toolPalette.find.kind.text')
+const kindLabel = (kind: AcApFindLayoutHit['kind']) => {
+  switch (kind) {
+    case 'mtext':
+      return t('main.toolPalette.find.kind.mtext')
+    case 'attribute':
+      return t('main.toolPalette.find.kind.attribute')
+    case 'block':
+      return t('main.toolPalette.find.kind.block')
+    case 'dimension':
+      return t('main.toolPalette.find.kind.dimension')
+    case 'leader':
+      return t('main.toolPalette.find.kind.leader')
+    case 'table':
+      return t('main.toolPalette.find.kind.table')
+    default:
+      return t('main.toolPalette.find.kind.text')
+  }
+}
 
 /** `Type · layer · (x, y)` label for a hit (same format as cad-simple-ui-plugin). */
 const describeHit = (hit: AcApFindLayoutHit) => {
   let kind = kindLabel(hit.kind)
-  if (hit.kind === 'attribute') {
+  if (hit.kind === 'attribute' || (hit.kind === 'block' && hit.tag)) {
     const owner = [hit.blockName, hit.tag].filter(Boolean).join(' / ')
     if (owner) kind = `${kind} ${owner}`
   }

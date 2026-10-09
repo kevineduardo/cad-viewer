@@ -758,7 +758,11 @@ export default {
       kind: {
         text: 'Metin',
         mtext: 'Çok satırlı metin',
-        attribute: 'Öznitelik'
+        attribute: 'Öznitelik',
+        block: 'Blok metni',
+        dimension: 'Ölçü',
+        leader: 'Kılavuz',
+        table: 'Tablo'
       }
     },
     countList: {

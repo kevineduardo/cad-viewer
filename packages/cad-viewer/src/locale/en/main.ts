@@ -758,7 +758,11 @@ export default {
       kind: {
         text: 'Text',
         mtext: 'MText',
-        attribute: 'Attribute'
+        attribute: 'Attribute',
+        block: 'Block text',
+        dimension: 'Dimension',
+        leader: 'Leader',
+        table: 'Table'
       }
     },
     countList: {

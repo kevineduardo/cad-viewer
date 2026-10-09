@@ -712,7 +712,11 @@ export default {
       kind: {
         text: '文字',
         mtext: '多行文字',
-        attribute: '属性'
+        attribute: '属性',
+        block: '块文字',
+        dimension: '标注',
+        leader: '引线',
+        table: '表格'
       }
     },
     countList: {
