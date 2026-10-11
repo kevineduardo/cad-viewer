@@ -168,6 +168,18 @@ pnpm test:e2e:ui      # Playwright UI mode
 
 From the monorepo root: `pnpm dev`, `pnpm preview`, `pnpm test:e2e`.
 
+### FIND e2e: parallel cold start
+
+`playwright.config.ts` runs with `workers: 1` on CI and one worker per core locally. The
+FIND specs (`e2e/tests/find-layouts.spec.ts`, `find-mobile.spec.ts`) pass with 1, 2 and 4
+workers (8/8), but with 4 workers the first four tests take about 1 minute each (vs ~10 s
+with 1 worker) against the 90 s test timeout: every worker loads the page at once while Vite
+is still pre-bundling dependencies on the first request, so the margin is thin on a slow or
+loaded machine. This is dev-server cold-start contention, not a FIND defect. For a
+deterministic run use `pnpm test:e2e --workers=1 find`; the timeouts are intentionally not
+raised. On Linux without Google Chrome set `PLAYWRIGHT_BROWSER_CHANNEL` or use a temporary
+config with `launchOptions.executablePath` pointing at a Playwright Chromium build.
+
 ## Browser requirements
 
 - Modern browser with **WebGL**
