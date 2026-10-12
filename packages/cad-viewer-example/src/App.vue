@@ -28,6 +28,7 @@
         :disable-export="disableExport"
         @create="onViewerCreate"
         :base-url="BASE_URL"
+        :offline-version-url="OFFLINE_VERSION_URL"
       />
     </div>
   </div>
@@ -63,6 +64,11 @@ import {
 } from './googleDriveEnv'
 import { initializeLocale } from './locale'
 import {
+  IS_OFFLINE_BUILD,
+  OFFLINE_VERSION_URL,
+  resolveCadDataBaseUrl
+} from './offline'
+import {
   getOneDriveEnvConfig,
   registerOneDriveFromEnv
 } from './onedriveEnv'
@@ -75,8 +81,9 @@ AcApSettingManager.configure({
 
 initializeLocale()
 
-const oneDriveEnv = getOneDriveEnvConfig()
-const googleDriveEnv = getGoogleDriveEnvConfig()
+// Cloud drives need the network; the offline bundle opens local files only.
+const oneDriveEnv = IS_OFFLINE_BUILD ? null : getOneDriveEnvConfig()
+const googleDriveEnv = IS_OFFLINE_BUILD ? null : getGoogleDriveEnvConfig()
 
 /**
  * Landing-page registry used before DocManager exists.
@@ -189,7 +196,7 @@ const initialize = () => {
   )
 }
 
-const BASE_URL = 'https://cdn.jsdelivr.net/gh/mlightcad/cad-data@main/'
+const BASE_URL = resolveCadDataBaseUrl()
 
 const showViewer = computed(
   () =>
