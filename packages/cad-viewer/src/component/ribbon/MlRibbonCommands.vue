@@ -188,6 +188,8 @@ type OverlayTextHeightMode = 'adaptive' | 'custom'
 
 interface Props {
   currentLocale?: LocaleProp
+  /** When set, the File menu shows an “Offline version” entry opening it. */
+  offlineVersionUrl?: string
 }
 
 /**
@@ -201,7 +203,8 @@ interface RibbonSysVarChangeEvent {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  currentLocale: undefined
+  currentLocale: undefined,
+  offlineVersionUrl: undefined
 })
 
 const features = useSettings()
@@ -2716,10 +2719,17 @@ const fileMenuItems = computed<FileMenuItemModel[]>(() => {
       ]
     })
   }
+  if (props.offlineVersionUrl) {
+    items.push({
+      id: 'OfflineVersion',
+      label: t('main.mainMenu.offlineVersion'),
+      divided: true
+    })
+  }
   items.push({
     id: 'About',
     label: t('main.mainMenu.about'),
-    divided: true
+    divided: !props.offlineVersionUrl
   })
   return items
 })
@@ -2814,6 +2824,10 @@ const handleFileMenuSelect = async (command: string) => {
     }
   } else if (command === 'DrawingUnits') {
     AcApDocManager.instance.sendStringToExecute('units')
+  } else if (command === 'OfflineVersion') {
+    if (props.offlineVersionUrl) {
+      window.open(props.offlineVersionUrl, '_blank', 'noopener')
+    }
   } else if (command === 'About') {
     AcApDocManager.instance.sendStringToExecute('about')
   }
