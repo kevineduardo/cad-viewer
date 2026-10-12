@@ -6,6 +6,7 @@ import {
 
 import type { AcApDocManager } from '../app/AcApDocManager'
 import { acapFindHitBox, type AcApFindLayoutHit } from './findDrawing'
+import { acapGetFindBlockRecord } from './findText'
 
 /** Options for {@link acapNavigateToFindHit}. */
 export interface AcApFindNavigateOptions {
@@ -159,7 +160,7 @@ export async function acapNavigateToFindHit(
 
   if (view.activeLayoutBtrId !== hit.layoutId) {
     if (options.activateLayout === false) return 'layout-mismatch'
-    if (!db.tables.blockTable.getIdAt(hit.layoutId)) return 'layout-missing'
+    if (!acapGetFindBlockRecord(db, hit.layoutId)) return 'layout-missing'
 
     // The switch itself registers the layout as visited, so capture this first.
     const firstVisit = !view.isLayoutInitialized(hit.layoutId)
