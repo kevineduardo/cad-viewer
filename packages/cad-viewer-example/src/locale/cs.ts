@@ -18,6 +18,8 @@ export default {
       subtitle: 'Importujte výkresy DWG nebo DXF do prohlížeče',
       fontCdnNotice:
         'If you are in a country or region with network access restrictions, please turn on a VPN. Default font files are hosted on GitHub; when access is limited they load very slowly, which can make opening drawings slow or cause text not to display correctly.',
+      offlineVersion:
+        'Offline verze: stáhněte si prohlížeč a používejte jej bez internetu',
       newDrawing: 'Nový výkres',
       or: 'nebo',
       dropFile: 'Přetáhněte soubor nebo',
