@@ -171,6 +171,12 @@ interface Props {
    */
   htmlViewerRuntimeUrl?: string | URL
   /**
+   * URL of a page offering a downloadable offline build of the viewer.
+   * When set, the File menu shows an “Offline version” entry that opens it in
+   * a new tab. Omit (default) to hide the entry, e.g. inside the offline build.
+   */
+  offlineVersionUrl?: string
+  /**
    * The flag whether to use main thread or webwork to render drawing.
    * - true: use main thread
    * - false: use web worker
@@ -235,6 +241,7 @@ const props = withDefaults(defineProps<Props>(), {
   docsBaseUrl: undefined,
   disableExport: false,
   htmlViewerRuntimeUrl: './assets/viewer-runtime.iife.js',
+  offlineVersionUrl: undefined,
   useMainThreadDraw: true,
   theme: 'dark',
   mode: AcEdOpenMode.Write,
@@ -644,6 +651,7 @@ const closeNotificationCenter = () => {
           <ml-ribbon-commands
             v-if="features.isShowRibbon"
             :current-locale="effectiveLocale"
+            :offline-version-url="props.offlineVersionUrl"
           />
         </header>
 

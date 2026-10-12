@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aitra CadViewer — Versão offline</title>
+    <meta
+      name="description"
+      content="Descarregue o Aitra CadViewer para ver desenhos DWG e DXF sem ligação à internet."
+    />
+    <meta name="theme-color" content="#0f1720" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <script>
+      // Relative links below need the trailing slash (/offline -> /offline/).
+      if (!location.pathname.endsWith('/') && !location.pathname.endsWith('.html')) {
+        location.replace(location.pathname + '/' + location.search + location.hash)
+      }
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #0f1720;
+        --muted: #475569;
+        --line: #e2e8f0;
+        --surface: #f8fafc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        background: var(--surface);
+        color: var(--ink);
+        font: 15px/1.55 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        width: 100%;
+        max-width: 560px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 28px 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .brand img {
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+      }
+      .download {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        margin: 20px 0 8px;
+        padding: 12px 18px;
+        border-radius: 10px;
+        background: var(--ink);
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .download:hover {
+        background: #1e293b;
+      }
+      .alt {
+        font-size: 13px;
+        text-align: center;
+      }
+      .alt a,
+      .back a {
+        color: var(--ink);
+      }
+      ol {
+        margin: 20px 0 16px;
+        padding-left: 22px;
+      }
+      li {
+        margin-bottom: 8px;
+      }
+      .note {
+        font-size: 13px;
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+        margin-top: 16px;
+      }
+      .meta {
+        font-size: 12px;
+        word-break: break-all;
+      }
+      .back {
+        font-size: 13px;
+        margin: 16px 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">
+        <img src="/favicon.png" alt="" width="20" height="20" />
+        <span>Aitra CadViewer</span>
+      </p>
+      <h1>Versão offline</h1>
+      <p>
+        Veja desenhos DWG e DXF sem ligação à internet. É um único ficheiro:
+        não precisa de instalar nada.
+      </p>
+
+      <a class="download" href="./{{HTML_NAME}}" download="{{HTML_NAME}}"
+        >Descarregar ({{HTML_SIZE}})</a
+      >
+      <p class="alt">
+        Download lento ou bloqueado?
+        <a href="./{{ZIP_NAME}}" download="{{ZIP_NAME}}"
+          >Versão comprimida .zip ({{ZIP_SIZE}})</a
+        >
+      </p>
+
+      <ol>
+        <li>Descarregue o ficheiro <strong>{{HTML_NAME}}</strong>.</li>
+        <li>
+          Faça duplo clique no ficheiro: abre no navegador (Chrome, Edge,
+          Firefox ou Safari).
+        </li>
+        <li>Abra um desenho DWG ou DXF do seu computador. Pronto.</li>
+      </ol>
+
+      <p class="note">
+        Funciona sem internet: aplicação, fontes e leitor de DWG estão dentro
+        do ficheiro. Guarde-o onde quiser (por exemplo, numa pen USB). Se
+        descarregar o .zip, extraia-o primeiro. Na versão offline não há
+        OneDrive nem Google Drive, e o assistente de IA precisa de internet.
+      </p>
+      <p class="meta">
+        Versão {{VERSION}} · {{BUILD_DATE}} · SHA-256 {{SHA256}}
+      </p>
+      <p class="back"><a href="../">← Voltar ao CadViewer online</a></p>
+    </main>
+  </body>
+</html>
