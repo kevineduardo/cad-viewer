@@ -90,6 +90,7 @@ import {
   eventBus
 } from '../editor'
 import { AcApPluginManager } from '../plugin/AcApPluginManager'
+import { acapRepairBlockTableOwners } from '../util/AcApRepairBlockTableOwners'
 import { isScriptQuitCommand, parseScriptLines } from '../util/AcApScriptParser'
 import { acapWithSecondaryDatabase } from '../util/AcApSecondaryDatabase'
 import { AcTrView2d } from '../view'
@@ -2311,6 +2312,8 @@ export class AcApDocManager {
       const view = session.context.view as AcTrView2d
       session.doc.destroy()
       const doc = session.doc
+      // Before anything looks layouts up by id (FIND, layout switching).
+      acapRepairBlockTableOwners(doc.database)
       this.events.documentActivated.dispatch({
         doc,
         mode: this.getDocumentEventMode(options)
