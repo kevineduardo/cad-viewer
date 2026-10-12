@@ -131,6 +131,8 @@ async function cadData(file, { refresh = false } = {}) {
   return data
 }
 
+const SAFE_FILE_NAME = /^(?!\.)[\w@ .-]+$/
+
 async function collectFonts() {
   let catalog
   try {
@@ -145,8 +147,12 @@ async function collectFonts() {
     )
   }
   const includeAll = process.env.CAD_OFFLINE_FONTS === 'all'
+  // The catalog is remote data: only accept plain file names so an entry can
+  // never escape the cache directory or break out of the vfs markup.
   const wanted = catalog.filter(
-    font => includeAll || !EXCLUDED_FONTS.has(font.file)
+    font =>
+      SAFE_FILE_NAME.test(font.file) &&
+      (includeAll || !EXCLUDED_FONTS.has(font.file))
   )
   const files = new Map()
   const queue = [...wanted]
@@ -254,9 +260,12 @@ function assertClassicScript(file, data) {
   }
 }
 
+const escapeAttr = value =>
+  String(value).replace(/[&"<>]/g, char => `&#${char.charCodeAt(0)};`)
+
 function vfsBlock(key, data) {
   const lines = data.toString('base64').replace(/.{1,4096}/g, '$&\n')
-  return `<script type="application/x-cad-vfs" data-key="${key}" data-mime="${mimeOf(key)}">\n${lines}</script>\n`
+  return `<script type="application/x-cad-vfs" data-key="${escapeAttr(key)}" data-mime="${escapeAttr(mimeOf(key))}">\n${lines}</script>\n`
 }
 
 /** Minimal ZIP writer (deflate) so no archive dependency is needed. */
