@@ -23,8 +23,9 @@ export interface AcUiFindPaletteViewOptions {
 /**
  * Text search view for the dock panel (FIND).
  *
- * Searches TEXT, MTEXT and block attribute values of the **whole drawing**
- * (every layout) by default, or only the active layout when "Current layout
+ * Searches TEXT, MTEXT, attribute values and the text inside blocks,
+ * dimensions, multileaders and tables of the **whole drawing** (every layout)
+ * by default, or only the active layout when "Current layout
  * only" is checked. The search runs when the user submits a query (Enter or the
  * Find button) — never while typing and never in the background. Each result
  * names its layout; clicking a result (or Enter / Shift+Enter in the input to
@@ -290,8 +291,9 @@ export class AcUiFindPaletteView {
       const layout = document.createElement('div')
       layout.className = 'ml-ex-ui-find-layout'
       layout.dataset.layoutId = hit.layoutId
-      layout.textContent = hit.layoutName
-      layout.title = hit.layoutName
+      const layoutName = this.layoutLabel(hit.layoutName)
+      layout.textContent = layoutName
+      layout.title = layoutName
 
       const text = document.createElement('div')
       text.className = 'ml-ex-ui-find-text'
@@ -307,10 +309,15 @@ export class AcUiFindPaletteView {
     })
   }
 
+  /** Layout name for display; layouts can have an empty name. */
+  private layoutLabel(name: string): string {
+    return name.trim() ? name : this.i18n.t('findPalette.unnamedLayout')
+  }
+
   /** `Type · layer · (x, y)` label for a hit. */
   private describeHit(hit: AcUiFindLayoutHit): string {
     let kind = this.i18n.t(`findPalette.kind.${hit.kind}`)
-    if (hit.kind === 'attribute') {
+    if (hit.kind === 'attribute' || (hit.kind === 'block' && hit.tag)) {
       const owner = [hit.blockName, hit.tag].filter(Boolean).join(' / ')
       if (owner) kind = `${kind} ${owner}`
     }
@@ -357,7 +364,7 @@ export class AcUiFindPaletteView {
         return
       }
       this.navigationNote = this.i18n.t('findPalette.layoutUnavailable', {
-        layout: hit.layoutName
+        layout: this.layoutLabel(hit.layoutName)
       })
       this.renderResults()
     })
