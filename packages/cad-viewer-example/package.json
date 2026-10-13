@@ -20,6 +20,7 @@
     "dev:local-mtext-renderer": "vite --mode local-mtext-renderer",
     "dev:local-ui-components": "vite --mode local-ui-components",
     "test:e2e": "playwright test",
+    "verify:offline": "node scripts/verify-offline.mjs",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint src/",
