@@ -13,7 +13,11 @@
  * - window.Worker starts embedded worker scripts as classic workers from
  *   blob: URLs. A prelude gives each worker a fetch() that asks the page for
  *   embedded files over a MessageChannel, and replaces import.meta.url
- *   (unusable in blob workers) with the worker's virtual URL.
+ *   (unusable in blob workers) with the worker's virtual URL. The prelude
+ *   also refuses any other network access and reports blocked attempts and
+ *   CSP violations to the page (see network-guard.js).
+ * - window.pdfjsWorker lazily evaluates the embedded PDF.js worker code on
+ *   the main thread for PDF import.
  */
 ;(function () {
   'use strict'
@@ -26,6 +30,8 @@
     'https://cdn.jsdelivr.net/gh/mlightcad/cad-data/'
   ]
   var ROOTS = [VFS_ROOT].concat(CDN_ROOTS)
+  // Classic-script build of PDF.js's pdf.worker.min.mjs (see build-offline).
+  var PDFJS_WORKER_KEY = 'pdfjs/pdf.worker.js'
   var PAGE_DIR = new URL('./', window.location.href).href
   var entries = null
   var bytesCache = new Map()
@@ -141,6 +147,10 @@
     var queued = []
     var pending = new Map()
     var nextId = 0
+    function send(message) {
+      if (port) port.postMessage(message)
+      else queued.push(message)
+    }
     self.addEventListener('message', function (event) {
       var data = event.data
       if (!data || !data.__cadVfsPort) return
@@ -151,31 +161,58 @@
         pending.delete(reply.data.id)
         if (done) done(reply.data)
       }
-      queued.splice(0).forEach(function (send) {
-        send()
+      queued.splice(0).forEach(function (message) {
+        port.postMessage(message)
       })
     })
-    var nativeFetch = self.fetch.bind(self)
-    self.fetch = function (input, init) {
-      var url =
+    // Workers inherit the page CSP; report violations to the page.
+    self.addEventListener('securitypolicyviolation', function (event) {
+      send({
+        violation: {
+          effectiveDirective: event.effectiveDirective,
+          violatedDirective: event.violatedDirective,
+          blockedURI: event.blockedURI,
+          sample: event.sample
+        }
+      })
+    })
+    function resolve(input) {
+      var raw =
         typeof input === 'string'
           ? input
           : input instanceof URL
             ? input.href
-            : input.url
+            : input && input.url
+      try {
+        return new URL(raw, self.__CAD_VFS_SELF_URL__).href
+      } catch (_error) {
+        return String(raw)
+      }
+    }
+    function isLocal(url) {
+      return /^(?:data|blob|about):/i.test(url)
+    }
+    function networkError(kind, url) {
+      send({ blocked: { kind: kind, url: url } })
+      return new TypeError(
+        'Network access is disabled in the offline version (' + url + ')'
+      )
+    }
+    var nativeFetch = self.fetch.bind(self)
+    self.fetch = function (input, init) {
+      var url = resolve(input)
       var root = roots.filter(function (r) {
         return url.indexOf(r) === 0
       })[0]
-      if (!root) return nativeFetch(input, init)
+      if (!root) {
+        if (isLocal(url)) return nativeFetch(input, init)
+        return Promise.reject(networkError('worker fetch', url))
+      }
       var key = decodeURIComponent(url.slice(root.length).split(/[?#]/)[0])
-      return new Promise(function (resolve) {
-        var send = function () {
-          var id = ++nextId
-          pending.set(id, resolve)
-          port.postMessage({ id: id, key: key })
-        }
-        if (port) send()
-        else queued.push(send)
+      return new Promise(function (done) {
+        var id = ++nextId
+        pending.set(id, done)
+        send({ id: id, key: key })
       }).then(function (reply) {
         return reply.buffer
           ? new Response(reply.buffer, {
@@ -185,6 +222,30 @@
           : new Response('Not found', { status: 404 })
       })
     }
+    if (typeof XMLHttpRequest === 'function') {
+      var nativeXhrOpen = XMLHttpRequest.prototype.open
+      XMLHttpRequest.prototype.open = function (method, url) {
+        var resolved = resolve(url)
+        if (!isLocal(resolved)) throw networkError('worker xhr', resolved)
+        return nativeXhrOpen.apply(this, arguments)
+      }
+    }
+    if (typeof self.importScripts === 'function') {
+      var nativeImportScripts = self.importScripts
+      self.importScripts = function () {
+        for (var i = 0; i < arguments.length; i++) {
+          var url = resolve(arguments[i])
+          if (!isLocal(url)) throw networkError('importScripts', url)
+        }
+        return nativeImportScripts.apply(self, arguments)
+      }
+    }
+    ;['WebSocket', 'EventSource'].forEach(function (name) {
+      if (typeof self[name] !== 'function') return
+      self[name] = function (url) {
+        throw networkError('worker ' + name, resolve(url))
+      }
+    })
   }
 
   function workerBlobUrl(key) {
@@ -220,11 +281,22 @@
       var worker = new NativeWorker(workerBlobUrl(key), classicOptions)
       var channel = new MessageChannel()
       channel.port1.onmessage = function (event) {
-        var file = read(event.data.key)
+        var data = event.data
+        if (data.blocked) {
+          var record = window.__CAD_OFFLINE_RECORD_BLOCKED__
+          if (record) record(data.blocked.kind, data.blocked.url)
+          return
+        }
+        if (data.violation) {
+          var recordViolation = window.__CAD_OFFLINE_RECORD_VIOLATION__
+          if (recordViolation) recordViolation('worker ' + key, data.violation)
+          return
+        }
+        var file = read(data.key)
         var buffer = file ? file.bytes.slice().buffer : null
         channel.port1.postMessage(
           {
-            id: event.data.id,
+            id: data.id,
             type: file ? file.type : null,
             buffer: buffer
           },
@@ -237,4 +309,34 @@
     VfsWorker.prototype = NativeWorker.prototype
     window.Worker = VfsWorker
   }
+
+  // PDF.js runs its "worker" on the main thread when globalThis.pdfjsWorker
+  // is set, so PDF import never has to start a module worker or import() a
+  // script by URL (neither works on file:// pages under the offline CSP).
+  // The embedded copy is a classic script, evaluated on first use.
+  function definePdfjsWorker(value) {
+    Object.defineProperty(window, 'pdfjsWorker', {
+      value: value,
+      writable: true,
+      configurable: true,
+      enumerable: true
+    })
+  }
+  Object.defineProperty(window, 'pdfjsWorker', {
+    configurable: true,
+    enumerable: true,
+    get: function () {
+      var file = read(PDFJS_WORKER_KEY)
+      definePdfjsWorker(undefined)
+      if (file) {
+        var script = document.createElement('script')
+        script.textContent = new TextDecoder().decode(file.bytes)
+        document.head.appendChild(script)
+        script.remove()
+        bytesCache.delete(PDFJS_WORKER_KEY)
+      }
+      return window.pdfjsWorker
+    },
+    set: definePdfjsWorker
+  })
 })()

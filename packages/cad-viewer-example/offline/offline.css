@@ -1,0 +1,22 @@
+/*
+ * Offline-only styles, inlined into cad-viewer-offline.html by
+ * scripts/build-offline.mjs.
+ */
+
+/* Links neutralized by network-guard.js read as plain text. */
+a[data-offline-href] {
+  color: inherit;
+  cursor: text;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+/* Mobile command help opens the online user guide in an iframe. */
+.ml-mobile-cmd-help {
+  display: none !important;
+}
+
+/* Loading a missing external reference from a URL needs the network. */
+.ml-external-ref-from-url {
+  display: none !important;
+}
