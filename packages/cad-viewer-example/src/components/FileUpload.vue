@@ -32,10 +32,6 @@
           <div ref="fileOpenHost" class="file-open-host"></div>
         </div>
 
-        <p v-if="!IS_OFFLINE_BUILD" class="font-cdn-notice">
-          {{ t('example.fileUpload.fontCdnNotice') }}
-        </p>
-
         <p v-if="OFFLINE_VERSION_URL" class="upload-offline">
           <a
             class="offline-version-link"
@@ -348,7 +344,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import aitraLogo from '../assets/aitra-logo.png'
-import { IS_OFFLINE_BUILD, OFFLINE_VERSION_URL } from '../offline'
+import { OFFLINE_VERSION_URL } from '../offline'
 
 interface Props {
   onFileSelect: (
@@ -669,17 +665,6 @@ const isValidFile = (file: File): boolean => {
   font-size: 12px;
   color: #64748b;
   line-height: 1.35;
-}
-
-.font-cdn-notice {
-  margin: 12px 0 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #92400e;
-  font-size: 11px;
-  line-height: 1.45;
 }
 
 .upload-offline {

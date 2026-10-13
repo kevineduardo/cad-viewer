@@ -16,8 +16,6 @@ export default {
       credit: 'مبني على المشروع مفتوح المصدر mlightcad/cad-viewer',
       title: 'اختر ملف CAD لعرضه',
       subtitle: 'استورد رسومات DWG أو DXF إلى العارض',
-      fontCdnNotice:
-        'If you are in a country or region with network access restrictions, please turn on a VPN. Default font files are hosted on GitHub; when access is limited they load very slowly, which can make opening drawings slow or cause text not to display correctly.',
       offlineVersion: 'النسخة دون اتصال: نزّل العارض لاستخدامه بدون إنترنت',
       newDrawing: 'رسم جديد',
       or: 'أو',

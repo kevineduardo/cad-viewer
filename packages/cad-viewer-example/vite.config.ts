@@ -7,6 +7,7 @@ import svgLoader from 'vite-svg-loader'
 import { visualizer } from 'rollup-plugin-visualizer'
 import vue from '@vitejs/plugin-vue'
 import { examplePeerPackageAliases, exampleRollupOutput } from '../vite-config/pluginRollupOutput'
+import { selfHostPlugin } from './scripts/self-host.mjs'
 import {
   LIBREDWG_CONVERTER_PACKAGE,
   LIBREDWG_PARSER_WASM_FILE,
@@ -200,6 +201,9 @@ export default defineConfig(({ command, mode }) => {
 
   const plugins = [
     offlineTrailingSlashPlugin(),
+    // Same-origin fonts/templates and the precaching service worker (online
+    // build only; the offline bundle embeds them and never registers it).
+    selfHostPlugin({ enabled: !isOfflineBundle }),
     vue(),
     svgLoader(),
     viteStaticCopy({
@@ -279,7 +283,9 @@ export default defineConfig(({ command, mode }) => {
     },
     build: {
       outDir: 'dist',
-      modulePreload: false,
+      // Preload the entry's static imports in parallel (flat waterfall) for
+      // the first paint; the offline bundle is a single inlined chunk.
+      modulePreload: isOfflineBundle ? false : { polyfill: false },
       minify: true,
       ...(isOfflineBundle
         ? { assetsInlineLimit: Number.MAX_SAFE_INTEGER, cssCodeSplit: false }

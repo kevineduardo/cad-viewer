@@ -16,8 +16,6 @@ export default {
       credit: 'Based on the open-source mlightcad/cad-viewer',
       title: 'Select CAD File to View',
       subtitle: 'Import DWG or DXF drawings into the viewer',
-      fontCdnNotice:
-        'If you are in a country or region with network access restrictions, please turn on a VPN. Default font files are hosted on GitHub; when access is limited they load very slowly, which can make opening drawings slow or cause text not to display correctly.',
       offlineVersion:
         'Offline version: download the viewer to use it without internet',
       newDrawing: 'New Drawing',
