@@ -12,7 +12,7 @@
  * served by `offline/vfs-runtime.js`.
  *
  * Fonts and the template come from the mlightcad cad-data CDN at build time
- * and are cached in node_modules/.cache/cad-viewer-offline.
+ * and are cached in node_modules/.cache/cad-viewer-offline (cad-data.mjs).
  *
  * Env:
  *   CAD_SKIP_OFFLINE_BUNDLE=1  skip this step entirely
@@ -34,27 +34,22 @@ import { crc32, deflateRawSync } from 'node:zlib'
 
 import { build } from 'vite'
 
+import {
+  cadData,
+  collectCatalogFonts,
+  loadFontCatalog,
+  TEMPLATE_FILE
+} from './cad-data.mjs'
+
 const PKG_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST_DIR = join(PKG_DIR, 'dist')
 const OUT_DIR = join(DIST_DIR, 'offline')
 const CACHE_DIR = join(PKG_DIR, 'node_modules', '.cache', 'cad-viewer-offline')
 const APP_DIR = join(CACHE_DIR, 'app')
-const DATA_DIR = join(CACHE_DIR, 'cad-data')
 const OFFLINE_SRC_DIR = join(PKG_DIR, 'offline')
 
 const HTML_NAME = 'cad-viewer-offline.html'
 const ZIP_NAME = 'cad-viewer-offline.zip'
-const CAD_DATA_URL = 'https://cdn.jsdelivr.net/gh/mlightcad/cad-data@main/'
-const TEMPLATE_FILE = 'templates/acadiso.dxf'
-
-/** Default fallback chain fonts (`modern` preset); the build fails without them. */
-const REQUIRED_FONTS = new Set([
-  'simsun.woff',
-  'hztxt.shx',
-  'simplex.shx',
-  'amgdt.shx',
-  'txt.shx'
-])
 
 /**
  * Large optional CJK faces left out by default to keep the download small
@@ -100,82 +95,14 @@ const mimeOf = file => {
 
 const formatMb = bytes => `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
-async function download(url, attempts = 3) {
-  let lastError
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-      return Buffer.from(await response.arrayBuffer())
-    } catch (error) {
-      lastError = error
-      await new Promise(done => setTimeout(done, 500 * attempt))
-    }
-  }
-  throw new Error(`Failed to download ${url}: ${lastError?.message}`)
-}
-
-/** Downloads a cad-data file once and reuses the cached copy afterwards. */
-async function cadData(file, { refresh = false } = {}) {
-  const cached = join(DATA_DIR, file)
-  if (!refresh && existsSync(cached)) {
-    return readFileSync(cached)
-  }
-  const data = await download(
-    CAD_DATA_URL + file.split('/').map(encodeURIComponent).join('/')
-  )
-  mkdirSync(dirname(cached), { recursive: true })
-  writeFileSync(cached, data)
-  return data
-}
-
-const SAFE_FILE_NAME = /^(?!\.)[\w@ .-]+$/
-
 async function collectFonts() {
-  let catalog
-  try {
-    catalog = JSON.parse(
-      (await cadData('fonts/fonts.json', { refresh: true })).toString('utf8')
-    )
-  } catch (error) {
-    if (!existsSync(join(DATA_DIR, 'fonts/fonts.json'))) throw error
-    log(`font catalog refresh failed, using cached copy (${error.message})`)
-    catalog = JSON.parse(
-      readFileSync(join(DATA_DIR, 'fonts/fonts.json'), 'utf8')
-    )
-  }
+  const catalog = await loadFontCatalog(log)
   const includeAll = process.env.CAD_OFFLINE_FONTS === 'all'
-  // The catalog is remote data: only accept plain file names so an entry can
-  // never escape the cache directory or break out of the vfs markup.
-  const wanted = catalog.filter(
-    font =>
-      SAFE_FILE_NAME.test(font.file) &&
-      (includeAll || !EXCLUDED_FONTS.has(font.file))
-  )
-  const files = new Map()
-  const queue = [...wanted]
-  const workers = Array.from({ length: 8 }, async () => {
-    while (queue.length > 0) {
-      const font = queue.shift()
-      try {
-        files.set(font.file, await cadData(`fonts/${font.file}`))
-      } catch (error) {
-        if (REQUIRED_FONTS.has(font.file)) throw error
-        log(`skipping font ${font.file}: ${error.message}`)
-      }
-    }
-  })
-  await Promise.all(workers)
-  for (const required of REQUIRED_FONTS) {
-    if (!files.has(required)) {
-      throw new Error(`Required font ${required} is missing from the catalog`)
-    }
-  }
   // Only advertise fonts that are embedded so missing ones fall back cleanly.
-  const embeddedCatalog = catalog.filter(font => files.has(font.file))
-  return { files, catalog: embeddedCatalog }
+  return collectCatalogFonts(catalog, {
+    filter: font => includeAll || !EXCLUDED_FONTS.has(font.file),
+    log
+  })
 }
 
 async function buildApp() {
