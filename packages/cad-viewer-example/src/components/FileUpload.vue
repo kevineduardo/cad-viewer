@@ -349,7 +349,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import aitraLogo from '../assets/aitra-logo.png'
-import { OFFLINE_VERSION_URL } from '../offline'
+import { IS_OFFLINE_BUILD, OFFLINE_VERSION_URL } from '../offline'
 
 interface Props {
   onFileSelect: (
