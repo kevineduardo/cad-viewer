@@ -14,6 +14,12 @@
  * Fonts and the template come from the mlightcad cad-data CDN at build time
  * and are cached in node_modules/.cache/cad-viewer-offline (cad-data.mjs).
  *
+ * The viewer must never touch the internet: the page carries a strict
+ * Content-Security-Policy, `offline/network-guard.js` blocks and records any
+ * attempt, online-only plugins are stubbed out (vite.config.ts), and the
+ * build fails if the final file contains an absolute URL that is not in
+ * URL_ALLOWLIST below. `scripts/verify-offline.mjs` checks it in a browser.
+ *
  * Env:
  *   CAD_SKIP_OFFLINE_BUNDLE=1  skip this step entirely
  *   CAD_OFFLINE_FONTS=all      embed every font in the catalog (~43 MB more)
@@ -27,12 +33,13 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vm from 'node:vm'
 import { crc32, deflateRawSync } from 'node:zlib'
 
-import { build } from 'vite'
+import { build, transformWithEsbuild } from 'vite'
 
 import {
   cadData,
@@ -50,6 +57,74 @@ const OFFLINE_SRC_DIR = join(PKG_DIR, 'offline')
 
 const HTML_NAME = 'cad-viewer-offline.html'
 const ZIP_NAME = 'cad-viewer-offline.zip'
+/** Must match PDFJS_WORKER_KEY in offline/vfs-runtime.js. */
+const PDFJS_WORKER_KEY = 'pdfjs/pdf.worker.js'
+/** Must match VFS_ROOT in offline/vfs-runtime.js. */
+const VFS_ROOT = 'https://offline.cad-viewer.invalid/'
+
+/**
+ * Content-Security-Policy of the offline viewer. Nothing may be loaded from
+ * the network: scripts and styles are inline, embedded workers run from
+ * blob: URLs (they inherit this policy) and images/fonts come from
+ * data:/blob:. The DWG parser worker needs WebAssembly ('wasm-unsafe-eval')
+ * and its embind glue builds functions with `new Function` ('unsafe-eval');
+ * neither allows loading anything.
+ */
+const CSP = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'",
+  'worker-src blob:',
+  'connect-src data: blob:',
+  'img-src data: blob:',
+  'font-src data: blob:',
+  'media-src data: blob:',
+  "style-src 'unsafe-inline'",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "manifest-src 'none'",
+  "form-action 'none'",
+  "base-uri 'none'"
+].join('; ')
+
+/**
+ * Absolute URLs that may appear in the offline file (markup, inline scripts
+ * and embedded text files such as worker scripts; script comments are not
+ * scanned). Anything else fails the build. Every entry must be inert at
+ * runtime; keep the patterns tight and explain each group.
+ */
+const URL_ALLOWLIST = [
+  // Answered locally by offline/vfs-runtime.js (fetch and worker fetch);
+  // never reach the network.
+  /^https:\/\/offline\.cad-viewer\.invalid\//,
+  /^https:\/\/cdn\.jsdelivr\.net\/gh\/mlightcad\/cad-data(?:@main)?(?:\/|\/fonts\/)?$/,
+  // Identifiers compared as strings, never requested: XML/SVG/XFA
+  // namespaces, URL-parsing bases, a reserved .invalid virtual base used by
+  // the HTML export package reader, and URL templates in PDF.js/linkify.
+  /^http:\/\/www\.w3\.org\/(?:1998\/Math\/MathML|1999\/xhtml|1999\/xlink|2000\/svg|2000\/xmlns\/|XML\/1998\/namespace|2000\/09\/xmldsig#|1999\/XSL\/Transform)$/,
+  /^http:\/\/www\.xfa\.org\/schema\/[\w./-]*$/,
+  /^http:\/\/ns\.adobe\.com\/(?:xdp|xdp\/pdf|xfdf|xmpmeta)\/$/,
+  /^https:\/\/foo\.bar$/,
+  /^https:\/\/acex-package\.invalid\/$/,
+  /^https?:\/\/\$\{\w+$/,
+  // Placeholder text in inputs (URL / xref path fields).
+  /^https?:\/\/(?:www\.)?example\.com(?:[/:?#]|$)/,
+  /^https:\/\/\.\.\.$/,
+  // Link targets in the About dialog and in notifications. network-guard.js
+  // renders such links as plain text and blocks window.open, so they can
+  // never be followed; the mlightcad credit text stays visible.
+  /^https:\/\/mlightcad\.github\.io\/cad-viewer\/$/,
+  /^https:\/\/mlightcad\.com\/cad-viewer\/docs\/$/,
+  /^https:\/\/mlightcad\.com\/dwg-parser\.html$/,
+  /^https:\/\/github\.com\/mlightcad\/cad-viewer$/,
+  // Text only: console warnings/errors of Vue, Element Plus, opentype.js and
+  // iconv-lite, and the "Producer" string pdf-lib writes into exported PDFs.
+  /^https:\/\/vuejs\.org\/error-reference\/#runtime-\$\{\w+$/,
+  /^https:\/\/element-plus\.org\/(?:en-US|zh-CN)\/component\/[\w.#-]+$/,
+  /^https:\/\/github\.com\/vuejs\/vue-next\/pull\/2485$/,
+  /^https:\/\/github\.com\/opentypejs\/opentype\.js\/issues\/183#issuecomment-\d+$/,
+  /^https:\/\/github\.com\/ashtuchkin\/iconv-lite\/wiki\/[\w-]+$/,
+  /^https:\/\/github\.com\/Hopding\/pdf-lib$/
+]
 
 /**
  * Large optional CJK faces left out by default to keep the download small
@@ -105,6 +180,60 @@ async function collectFonts() {
   })
 }
 
+/**
+ * PDF.js's worker as a classic script that only defines
+ * `globalThis.pdfjsWorker`; vfs-runtime.js evaluates it on first PDF import.
+ * It must be the same pdfjs-dist the app bundles (PDF.js checks versions).
+ */
+function pdfjsWorkerScript(appCode) {
+  const require = createRequire(join(PKG_DIR, '../cad-pdf-plugin/package.json'))
+  const workerPath = require.resolve('pdfjs-dist/build/pdf.worker.min.mjs')
+  const { version } = JSON.parse(
+    readFileSync(join(dirname(workerPath), '../package.json'), 'utf8')
+  )
+  if (!appCode.includes(`"${version}"`)) {
+    throw new Error(`App bundle does not use pdfjs-dist ${version}`)
+  }
+  const source = readFileSync(workerPath, 'utf8')
+  const exportStatement = /export\s*\{\s*WorkerMessageHandler\s*\}\s*;?/g
+  if ((source.match(exportStatement) ?? []).length !== 1) {
+    throw new Error('Unexpected pdf.worker.min.mjs exports')
+  }
+  const body = source
+    .replace(exportStatement, '')
+    .split('import.meta.url')
+    .join(JSON.stringify(VFS_ROOT + PDFJS_WORKER_KEY))
+  if (!body.includes('globalThis.pdfjsWorker')) {
+    throw new Error('pdf.worker.min.mjs no longer sets globalThis.pdfjsWorker')
+  }
+  const script = Buffer.from(
+    `(function(){'use strict';\n${body}\n}).call(globalThis);\n`,
+    'utf8'
+  )
+  assertClassicScript(PDFJS_WORKER_KEY, script)
+  return script
+}
+
+/**
+ * cad-pdf-plugin's library build inlines the PDF.js worker as a data: URL
+ * (~3 MB) for `GlobalWorkerOptions.workerSrc`. The offline viewer never loads
+ * it (see pdfjsWorkerScript), so replace it with an empty script.
+ */
+function dropInlinedPdfjsWorker(code) {
+  let dropped = 0
+  const result = code.replace(
+    /data:text\/javascript;base64,([A-Za-z0-9+/=]+)/g,
+    (match, base64) => {
+      const source = Buffer.from(base64, 'base64').toString('utf8')
+      if (!source.includes('WorkerMessageHandler')) return match
+      dropped++
+      return 'data:text/javascript,'
+    }
+  )
+  if (dropped > 0) log(`dropped ${dropped} inlined PDF.js worker copy`)
+  return result
+}
+
 async function buildApp() {
   log('building app (vite --mode offline)')
   await build({
@@ -134,11 +263,11 @@ function findEntryScript(html) {
 }
 
 /**
- * Inlines CSS, icons, the VFS runtime, the embedded files and the app chunk
- * into vite's index.html. The template is edited before the (large) app code
+ * Inlines the CSP, guard and VFS runtime, CSS, icons, the embedded files and
+ * the app chunk (`code`) into vite's index.html. The template is edited before the (large) app code
  * goes in, so no pattern can match text inside the bundle.
  */
-function assembleHtml(vfsRuntime, vfsHtml) {
+function assembleHtml(headHtml, vfsHtml, code) {
   let html = readAppHtml()
   const entry = findEntryScript(html)
   html = html.replace(
@@ -153,10 +282,17 @@ function assembleHtml(vfsRuntime, vfsHtml) {
     const data = readFileSync(path).toString('base64')
     return `href="data:${mimeOf(file)};base64,${data}"`
   })
-  html = html.replace(
-    '<head>',
-    () => `<head>\n    <script>${escapeScript(vfsRuntime)}</script>`
-  )
+  // The CSP and the guard must come before anything that could load a
+  // resource; only the charset declaration may precede them.
+  const charset = /<meta charset="[^"]*"\s*\/?>/i.exec(html)
+  if (
+    !charset ||
+    /<(?:script|link|style|base)\b/i.test(html.slice(0, charset.index))
+  ) {
+    throw new Error('Expected <meta charset> before any script or link')
+  }
+  const headStart = charset.index + charset[0].length
+  html = `${html.slice(0, headStart)}${headHtml}${html.slice(headStart)}`
   const bodyEnd = html.lastIndexOf('</body>')
   html = `${html.slice(0, bodyEnd)}${vfsHtml}${html.slice(bodyEnd)}`
   const [before, after] = html.split(entry.tag)
@@ -164,7 +300,6 @@ function assembleHtml(vfsRuntime, vfsHtml) {
   if (fileRef) {
     throw new Error(`Offline HTML still references a local file: ${fileRef[0]}`)
   }
-  const code = readFileSync(join(APP_DIR, entry.key), 'utf8')
   return `${before}<script type="module">${escapeScript(code)}</script>${after}`
 }
 
@@ -193,6 +328,77 @@ const escapeAttr = value =>
 function vfsBlock(key, data) {
   const lines = data.toString('base64').replace(/.{1,4096}/g, '$&\n')
   return `<script type="application/x-cad-vfs" data-key="${escapeAttr(key)}" data-mime="${escapeAttr(mimeOf(key))}">\n${lines}</script>\n`
+}
+
+const ABSOLUTE_URL = /\b(?:https?|wss?|ftp):\/\/[^\s"'`<>\\)\]},]*/gi
+/** `//host.tld/...` right after a quote, `(` or `=`: protocol-relative. */
+const PROTOCOL_RELATIVE_URL =
+  /(?<=["'`(=]\s*)\/\/(?:[a-z0-9-]+\.)+[a-z]{2,}(?=[/:"'`)\s])[^\s"'`<>\\)]*/gi
+
+/** Script code without comments: URLs in comments are never requested. */
+async function stripComments(code, name) {
+  const { code: stripped } = await transformWithEsbuild(code, `${name}.js`, {
+    loader: 'js',
+    legalComments: 'none',
+    minifyWhitespace: true,
+    minifySyntax: false,
+    minifyIdentifiers: false
+  })
+  return stripped
+}
+
+const INLINE_SCRIPT =
+  /(<script\b(?![^>]*application\/x-cad-vfs)[^>]*>)([\s\S]*?)(<\/script>)/g
+
+/**
+ * Fails the build when the offline file contains an absolute or
+ * protocol-relative URL outside URL_ALLOWLIST: in the page markup and
+ * styles, in its inline scripts (the app bundle, guard and vfs runtime) or
+ * in any embedded text file (worker scripts, JSON). Script comments are
+ * ignored; string literals, markup and styles are not. Binary entries
+ * (fonts, wasm, the template) are skipped.
+ */
+async function assertNoExternalUrls(html, vfs) {
+  const page = html.replace(
+    /<script type="application\/x-cad-vfs"[^>]*>[^<]*<\/script>/g,
+    ''
+  )
+  const scripts = [...page.matchAll(INLINE_SCRIPT)]
+  const sources = [[`${HTML_NAME} (markup)`, page.replace(INLINE_SCRIPT, '')]]
+  for (const [index, match] of scripts.entries()) {
+    const name = `${HTML_NAME} (inline script ${index + 1})`
+    sources.push([name, await stripComments(match[2], name)])
+  }
+  for (const [key, data] of vfs) {
+    if (/\.(?:js|mjs)$/.test(key)) {
+      sources.push([key, await stripComments(data.toString('utf8'), key)])
+    } else if (/\.(?:json|css|html)$/.test(key)) {
+      sources.push([key, data.toString('utf8')])
+    }
+  }
+  const offending = new Map()
+  for (const [name, text] of sources) {
+    for (const regex of [ABSOLUTE_URL, PROTOCOL_RELATIVE_URL]) {
+      for (const match of text.matchAll(regex)) {
+        const url = match[0]
+        if (URL_ALLOWLIST.some(pattern => pattern.test(url))) continue
+        if (offending.has(url)) continue
+        const context = text
+          .slice(Math.max(0, match.index - 60), match.index + url.length + 20)
+          .replace(/\s+/g, ' ')
+        offending.set(url, `${name}: ...${context}...`)
+      }
+    }
+  }
+  if (offending.size > 0) {
+    const list = [...offending]
+      .map(([url, where]) => `  ${url}\n      ${where}`)
+      .join('\n')
+    throw new Error(
+      `Offline HTML references ${offending.size} URL(s) outside the allowlist:\n${list}`
+    )
+  }
+  log(`URL check passed (${sources.length} sources scanned)`)
 }
 
 /** Minimal ZIP writer (deflate) so no archive dependency is needed. */
@@ -278,8 +484,12 @@ async function main() {
     buildApp()
   ])
   const entry = findEntryScript(readAppHtml()).key
+  const appCode = dropInlinedPdfjsWorker(
+    readFileSync(join(APP_DIR, entry), 'utf8')
+  )
 
   const vfs = [
+    [PDFJS_WORKER_KEY, pdfjsWorkerScript(appCode)],
     ['fonts/fonts.json', Buffer.from(JSON.stringify(catalog))],
     [TEMPLATE_FILE, template],
     ...[...fonts].map(([file, data]) => [`fonts/${file}`, data])
@@ -295,10 +505,19 @@ async function main() {
     }
   }
 
+  const offlineSource = file =>
+    readFileSync(join(OFFLINE_SRC_DIR, file), 'utf8')
   const html = assembleHtml(
-    readFileSync(join(OFFLINE_SRC_DIR, 'vfs-runtime.js'), 'utf8'),
-    vfs.map(([key, data]) => vfsBlock(key, data)).join('')
+    [
+      `\n    <meta http-equiv="Content-Security-Policy" content="${escapeAttr(CSP)}" />`,
+      `\n    <script>${escapeScript(offlineSource('network-guard.js'))}</script>`,
+      `\n    <script>${escapeScript(offlineSource('vfs-runtime.js'))}</script>`,
+      `\n    <style>${offlineSource('offline.css').replace(/<\/(style)/gi, '<\\/$1')}</style>`
+    ].join(''),
+    vfs.map(([key, data]) => vfsBlock(key, data)).join(''),
+    appCode
   )
+  await assertNoExternalUrls(html, vfs)
   const htmlBuffer = Buffer.from(html, 'utf8')
   const zip = createZip([{ name: HTML_NAME, data: htmlBuffer }])
 

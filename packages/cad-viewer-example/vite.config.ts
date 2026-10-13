@@ -176,6 +176,24 @@ export default defineConfig(({ command, mode }) => {
     }
   }
 
+  // `--mode offline` builds the single-file bundle (scripts/build-offline.mjs):
+  // one JS chunk and every asset inlined so nothing is loaded from disk.
+  const isOfflineBundle = mode === 'offline'
+  if (isOfflineBundle) {
+    // Plugins that only work online (AI assistant, cloud drives) are left out.
+    const stub = resolve(__dirname, 'offline/stubs/unavailable-plugin.js')
+    aliases.unshift(
+      {
+        find: /^@mlightcad\/cad-agent-plugin\/style\.css$/,
+        replacement: resolve(__dirname, 'offline/stubs/empty.css')
+      },
+      {
+        find: /^@mlightcad\/cad-(?:agent|onedrive|google-drive)-plugin(?:\/register)?$/,
+        replacement: stub
+      }
+    )
+  }
+
   aliases.push(
     ...examplePeerPackageAliases(__dirname).filter(
       alias =>
@@ -194,10 +212,6 @@ export default defineConfig(({ command, mode }) => {
   const mtextWorkerSrc = linkLocalMtextRenderer
     ? LOCAL_MTEXT_RENDERER_WORKER
     : `./node_modules/@mlightcad/cad-simple-viewer/dist/${MTEXT_RENDERER_WORKER_FILE}`
-
-  // `--mode offline` builds the single-file bundle (scripts/build-offline.mjs):
-  // one JS chunk and every asset inlined so nothing is loaded from disk.
-  const isOfflineBundle = mode === 'offline'
 
   const plugins = [
     offlineTrailingSlashPlugin(),

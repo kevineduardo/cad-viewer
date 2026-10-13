@@ -43,7 +43,12 @@
         </p>
 
         <p class="upload-credit">
+          <!-- Offline: keep the attribution, without a link to the internet. -->
+          <span v-if="IS_OFFLINE_BUILD">{{
+            t('example.fileUpload.credit')
+          }}</span>
           <a
+            v-else
             href="https://github.com/mlightcad/cad-viewer"
             target="_blank"
             rel="noopener noreferrer"
@@ -423,6 +428,8 @@ const mountFileOpenPanel = () => {
     host: fileOpenHost.value,
     theme: 'light',
     showNewDrawing: true,
+    // Opening a drawing by URL needs the network.
+    showUrl: !IS_OFFLINE_BUILD,
     getSources: () => props.getCloudSources?.() ?? [],
     onLocalFile: file => {
       if (!isValidFile(file)) return
@@ -643,11 +650,15 @@ const isValidFile = (file: File): boolean => {
   line-height: 1.4;
 }
 
-.upload-credit a {
+.upload-credit a,
+.upload-credit span {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   color: #475569;
+}
+
+.upload-credit a {
   text-decoration: underline;
 }
 
