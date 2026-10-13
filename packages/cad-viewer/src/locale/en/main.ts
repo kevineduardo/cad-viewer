@@ -747,9 +747,9 @@ export default {
       find: 'Find',
       matchCase: 'Match case',
       currentLayoutOnly: 'Current layout only',
-      hint: 'Press Enter to search text, multiline text and block attributes in the whole drawing (all layouts).',
+      hint: 'Press Enter to search text, multiline text, block attributes, block text (including constant attributes), dimensions, multileaders and tables in the whole drawing (all layouts).',
       hintLayout:
-        'Press Enter to search text, multiline text and block attributes in the current layout.',
+        'Press Enter to search text, multiline text, block attributes, block text (including constant attributes), dimensions, multileaders and tables in the current layout.',
       noResults: 'No text found',
       count: '{count} found',
       countLayouts: '{count} found in {layouts} layouts',

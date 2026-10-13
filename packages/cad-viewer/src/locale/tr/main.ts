@@ -747,8 +747,9 @@ export default {
       find: 'Bul',
       matchCase: 'Büyük/küçük harf duyarlı',
       currentLayoutOnly: 'Yalnızca geçerli yerleşim',
-      hint: 'Tüm çizimde (tüm yerleşimler) metin, çok satırlı metin ve blok özniteliklerini aramak için Enter tuşuna basın.',
-      hintLayout: 'Geçerli yerleşimde metin, çok satırlı metin ve blok özniteliklerini aramak için Enter tuşuna basın.',
+      hint: 'Tüm çizimde (tüm yerleşimler) metin, çok satırlı metin, blok özniteliklerini, blok metinlerini (sabit öznitelikler dahil), ölçüleri, kılavuzları ve tabloları aramak için Enter tuşuna basın.',
+      hintLayout:
+        'Geçerli yerleşimde metin, çok satırlı metin, blok özniteliklerini, blok metinlerini (sabit öznitelikler dahil), ölçüleri, kılavuzları ve tabloları aramak için Enter tuşuna basın.',
       noResults: 'Metin bulunamadı',
       count: '{count} sonuç',
       countLayouts: '{layouts} yerleşimde {count} sonuç',

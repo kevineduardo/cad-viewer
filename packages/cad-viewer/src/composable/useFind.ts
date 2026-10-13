@@ -14,7 +14,9 @@ export type MlFindState = 'idle' | 'done' | 'no-document'
 /**
  * State and actions of the Find palette (FIND).
  *
- * Searches TEXT, MTEXT and block attribute values of the whole drawing (all
+ * Searches TEXT, MTEXT, block attribute values, text inside block definitions
+ * (TEXT / MTEXT / ATTRIB and constant ATTDEF values), DIMENSION text,
+ * MULTILEADER contents and ACAD_TABLE cells of the whole drawing (all
  * layouts) by default, or of the active layout only when `currentLayoutOnly`
  * is set. The search is shared with cad-simple-ui-plugin
  * (`@mlightcad/cad-simple-viewer/find`) so both UIs behave identically. It runs

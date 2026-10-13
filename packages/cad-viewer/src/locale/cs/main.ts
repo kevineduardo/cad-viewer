@@ -734,8 +734,9 @@ export default {
       find: 'Hledat',
       matchCase: 'Rozlišovat velikost písmen',
       currentLayoutOnly: 'Pouze aktuální layout',
-      hint: 'Stiskněte Enter pro hledání textu, víceřádkového textu a atributů bloků v celém výkresu (všechny layouty).',
-      hintLayout: 'Stiskněte Enter pro hledání textu, víceřádkového textu a atributů bloků v aktuálním layoutu.',
+      hint: 'Stiskněte Enter pro hledání textu, víceřádkového textu, atributů bloků, textu v blocích (včetně konstantních atributů), kót, odkazů a tabulek v celém výkresu (všechny layouty).',
+      hintLayout:
+        'Stiskněte Enter pro hledání textu, víceřádkového textu, atributů bloků, textu v blocích (včetně konstantních atributů), kót, odkazů a tabulek v aktuálním layoutu.',
       noResults: 'Nebyl nalezen žádný text',
       count: 'Nalezeno: {count}',
       countLayouts: 'Nalezeno: {count} (layouty: {layouts})',
