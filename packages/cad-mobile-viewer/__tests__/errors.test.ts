@@ -9,6 +9,11 @@ import {
   toOpenFailedPayload
 } from '../src/import/errors'
 import { IMPORT_ERROR_CODES } from '../src/import/types'
+import {
+  HOSTILE_ERRORS,
+  instanceofHostileProxy,
+  NOT_REGISTERED_MESSAGE
+} from './helpers/hostileErrors'
 
 /** Apóstrofo: evita conflito entre prettier (aspas duplas) e eslint (`quotes`). */
 const Q = String.fromCharCode(39)
@@ -193,6 +198,33 @@ describe('mapOpenError — mensagem de objectos duck-typed', () => {
     }
     expect(() => mapOpenError(hostile, { format: 'dxf' })).not.toThrow()
     expect(mapOpenError(hostile, { format: 'dxf' }).code).toBe('parse')
+  })
+
+  test.each(HOSTILE_ERRORS)(
+    'erro hostil (%s) é classificado como parse sem lançar',
+    (_name, make) => {
+      for (const format of ['dxf', 'dwg'] as const) {
+        const hostile = make()
+        let f!: ReturnType<typeof mapOpenError>
+        expect(() => {
+          f = mapOpenError(hostile, { format })
+        }).not.toThrow()
+        expect(f).toMatchObject({ code: 'parse', stage: 'convert' })
+        expect(f.message).toBe(IMPORT_MESSAGES.parse)
+      }
+    }
+  )
+
+  test('proxy com instanceof hostil ainda classifica pela message string', () => {
+    expect(
+      mapOpenError(instanceofHostileProxy('out of memory'), { format: 'dxf' })
+        .code
+    ).toBe('oom')
+    expect(
+      mapOpenError(instanceofHostileProxy(NOT_REGISTERED_MESSAGE), {
+        format: 'dwg'
+      }).code
+    ).toBe('dwg-unavailable')
   })
 
   test('primitivos: só a string é usada', () => {

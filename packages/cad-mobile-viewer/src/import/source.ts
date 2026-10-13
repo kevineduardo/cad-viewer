@@ -4,7 +4,7 @@
 // loopback (I5). Sem rede própria: o `fetchBytes` é um porto injectado e o URL
 // só pode ser loopback (arquitectura §4: zero pedidos externos).
 
-import { makeFailure } from './errors'
+import { makeFailure, messageOf } from './errors'
 import { MAX_BASE64_BYTES } from './limits'
 import type { ImportFailure } from './types'
 
@@ -179,11 +179,8 @@ export async function readOpenSource(
   } catch (error) {
     return {
       ok: false,
-      failure: makeFailure(
-        'read-failed',
-        'source',
-        error instanceof Error ? error.message : String(error)
-      )
+      // `messageOf` nunca lança (getters/proxies hostis; sem `String(error)`)
+      failure: makeFailure('read-failed', 'source', messageOf(error))
     }
   }
 }

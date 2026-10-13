@@ -24,6 +24,7 @@ import {
 } from '../src/import/importer'
 import { MAX_DOCUMENT_BYTES } from '../src/import/limits'
 import { registerDwg } from '../src/import/registerDwg'
+import { HOSTILE_ERRORS, NOT_REGISTERED_MESSAGE } from './helpers/hostileErrors'
 import { buildDxf, fakeDwgHeader, toBuffer } from './helpers/syntheticDxf'
 
 const TEXTS = [
@@ -623,23 +624,286 @@ describe('loader por omissão e base de trabalho global', () => {
     }
   })
 
-  test('loader personalizado que conclui depois do timeout não gera resultado', async () => {
+  const TIMEOUT_FAILURE = {
+    ok: false,
+    failure: {
+      code: 'timeout',
+      message: IMPORT_MESSAGES.timeout,
+      stage: 'convert',
+      detail: '> 20 ms'
+    }
+  }
+
+  test('loader personalizado que RESOLVE depois do timeout: resultado exacto imutável, base tardia revertida, posse só largada depois', async () => {
     const gate = deferred()
-    const load: DocumentLoader = async () => {
+    const late = new AcDbDatabase()
+    const inputs: Parameters<DocumentLoader>[0][] = []
+    const load: DocumentLoader = async input => {
+      inputs.push(input)
+      setWorking(late) // como `AcDbDatabase.read`: instala-se antes de converter
       await gate.promise
-      return new AcDbDatabase()
+      return late
     }
     const out = await importDocument(dxfReq(), {
       dwg: 'ok',
       load,
       timeoutMs: 20
     })
-    expect(out).toMatchObject({ ok: false, failure: { code: 'timeout' } })
-    gate.resolve()
+    // contrato exacto do timeout: nem `document`, nem outro código/estágio
+    expect(out).toEqual(TIMEOUT_FAILURE)
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0].signal?.aborted).toBe(true)
+    expect(inputs[0].timeoutMs).toBe(20)
+    // enquanto o loader não termina, a base em curso mantém a posse
+    expect(working()).toBe(late)
+    // a importação seguinte espera: o seu loader ainda não foi chamado
+    const nextLoad = jest.fn<ReturnType<DocumentLoader>, []>(async () => {
+      throw new Error('próximo loader')
+    })
+    const next = importDocument(dxfReq(), {
+      dwg: 'ok',
+      load: nextLoad as unknown as DocumentLoader,
+      timeoutMs: 5_000
+    })
     await flush()
-    expect(out.ok).toBe(false)
+    expect(nextLoad).not.toHaveBeenCalled()
+    expect(working()).toBe(late)
+
+    gate.resolve()
+    expect(await next).toMatchObject({ ok: false, failure: { code: 'parse' } })
+    // a conclusão tardia foi descartada: a base devolvida não fica instalada
+    // (a seguinte capturou já a anterior certa)
+    expect(nextLoad).toHaveBeenCalledTimes(1)
     expect(working()).toBe(previous)
+    // o resultado já devolvido não mudou e não ganhou documento
+    expect(out).toEqual(TIMEOUT_FAILURE)
+    expect('document' in out).toBe(false)
   })
+
+  test('loader personalizado que REJEITA depois do timeout: sem rejeição não tratada, resultado imutável, o importador não repõe nada, posse largada', async () => {
+    const gate = deferred()
+    const orphan = new AcDbDatabase()
+    const load: DocumentLoader = async () => {
+      setWorking(orphan)
+      await gate.promise
+      // o loader NÃO se repõe (viola §3.1.1): o importador só repõe a base
+      // que o loader devolveu, por isso não toca nesta
+      throw new AcDbOpenDatabaseError('tardio', 'parse_failed')
+    }
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      const out = await importDocument(dxfReq(), {
+        dwg: 'ok',
+        load,
+        timeoutMs: 20
+      })
+      expect(out).toEqual(TIMEOUT_FAILURE)
+      gate.reject(new Error('nunca lido'))
+      await flush()
+      await flush()
+      expect(unhandled).not.toHaveBeenCalled()
+      expect(out).toEqual(TIMEOUT_FAILURE)
+      expect(working()).toBe(orphan)
+      // a posse foi largada: uma importação nova corre e termina
+      setWorking(previous)
+      const ok = await importDocument(dxfReq(), { dwg: 'ok' })
+      expect(ok.ok).toBe(true)
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+  })
+
+  test('expira ainda na fila (à espera de A): o loader de B nunca é chamado, C só corre depois de A terminar e vê a base de A', async () => {
+    const gateA = deferred()
+    const loadA: DocumentLoader = async input => {
+      await gateA.promise
+      return defaultLoader(input)
+    }
+    const loadB = jest.fn<ReturnType<DocumentLoader>, []>(async () => {
+      throw new Error('B nunca devia correr')
+    })
+    const seenByC: (AcDbDatabase | null)[] = []
+    const loadC: DocumentLoader = async input => {
+      seenByC.push(working())
+      return defaultLoader(input)
+    }
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      const a = importDocument(dxfReq(), {
+        dwg: 'ok',
+        load: loadA,
+        timeoutMs: 5_000
+      })
+      const b = importDocument(dxfReq(), {
+        dwg: 'ok',
+        load: loadB as unknown as DocumentLoader,
+        timeoutMs: 20
+      })
+      const c = importDocument(dxfReq(), {
+        dwg: 'ok',
+        load: loadC,
+        timeoutMs: 5_000
+      })
+      // B expira na fila, enquanto A ainda detém a posse
+      expect(await b).toEqual({
+        ok: false,
+        failure: {
+          code: 'timeout',
+          message: IMPORT_MESSAGES.timeout,
+          stage: 'convert',
+          detail: '> 20 ms'
+        }
+      })
+      expect(loadB).not.toHaveBeenCalled()
+      // C continua em fila: B expirado não abriu a posse a ninguém
+      await flush()
+      expect(seenByC).toEqual([])
+      expect(working()).toBe(previous)
+
+      gateA.resolve()
+      const outA = await a
+      expect(outA.ok).toBe(true)
+      const outC = await c
+      expect(outC.ok).toBe(true)
+      if (!outA.ok || !outC.ok) return
+      // B nunca correu; C capturou a base de A como «anterior» (não a stale)
+      expect(loadB).not.toHaveBeenCalled()
+      expect(seenByC).toEqual([outA.document.database])
+      expect(outC.document.database).not.toBe(outA.document.database)
+      expect(working()).toBe(outC.document.database)
+      await flush()
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+  })
+
+  test('expira na fila e A falha: a posse passa por B expirado e C corre com a base anterior', async () => {
+    const gateA = deferred()
+    const loadA: DocumentLoader = async () => {
+      await gateA.promise
+      throw new AcDbOpenDatabaseError('corrompido', 'parse_failed')
+    }
+    const loadB = jest.fn<ReturnType<DocumentLoader>, []>()
+    const a = importDocument(dxfReq(), {
+      dwg: 'ok',
+      load: loadA,
+      timeoutMs: 5_000
+    })
+    const b = importDocument(dxfReq(), {
+      dwg: 'ok',
+      load: loadB as unknown as DocumentLoader,
+      timeoutMs: 20
+    })
+    expect(await b).toMatchObject({ ok: false, failure: { code: 'timeout' } })
+    const c = importDocument(dxfReq(), { dwg: 'ok', timeoutMs: 5_000 })
+    gateA.resolve()
+    expect(await a).toMatchObject({ ok: false, failure: { code: 'parse' } })
+    const outC = await c
+    expect(outC.ok).toBe(true)
+    expect(loadB).not.toHaveBeenCalled()
+    if (outC.ok) expect(working()).toBe(outC.document.database)
+  })
+})
+
+describe('contenção de erros internos e do pedido', () => {
+  const dwgBytes = () => fakeDwgHeader()
+
+  test('o `catch` final usa o nome validado uma só vez (não relê o getter)', async () => {
+    const names = ['a.dwg', 'a.dxf', 'a.dxf']
+    let reads = 0
+    const request = {
+      get name(): string {
+        return names[Math.min(reads++, names.length - 1)]
+      },
+      bytes: dwgBytes()
+    }
+    const out = await importDocument(request, {
+      dwg: 'ok',
+      get load(): DocumentLoader {
+        // defeito interno depois da validação: classificado como DWG
+        throw new Error(NOT_REGISTERED_MESSAGE)
+      }
+    })
+    expect(out).toMatchObject({
+      ok: false,
+      failure: { code: 'dwg-unavailable', stage: 'inspect' }
+    })
+    expect(reads).toBe(1)
+  })
+
+  test('getter do nome que lança na releitura nunca escapa do catch', async () => {
+    let reads = 0
+    const request = {
+      get name(): string {
+        if (reads++ > 0) throw new Error('segunda leitura')
+        return 'a.dwg'
+      },
+      bytes: dwgBytes()
+    }
+    const out = await importDocument(request, {
+      dwg: 'ok',
+      get load(): DocumentLoader {
+        throw new Error('defeito interno')
+      }
+    })
+    expect(out).toMatchObject({ ok: false, failure: { code: 'parse' } })
+    expect(reads).toBe(1)
+  })
+
+  test('declaredSize é lido uma só vez', async () => {
+    let reads = 0
+    const bytes = toBuffer(buildDxf({ texts: TEXTS }))
+    const request = {
+      name: 'a.dxf',
+      bytes,
+      get declaredSize(): number {
+        reads++
+        return bytes.byteLength
+      }
+    }
+    expect(await importDocument(request, { dwg: 'ok' })).toMatchObject({
+      ok: true
+    })
+    expect(reads).toBe(1)
+  })
+
+  test('pedido com getter de `name` hostil (lança já na 1.ª leitura) não escapa', async () => {
+    const request = {
+      get name(): string {
+        throw new Error('hostil')
+      },
+      bytes: dwgBytes()
+    }
+    expect(await importDocument(request, { dwg: 'ok' })).toMatchObject({
+      ok: false,
+      failure: { code: 'parse', stage: 'inspect' }
+    })
+  })
+
+  test.each(HOSTILE_ERRORS)(
+    'loader que lança um erro hostil (%s) → parse, sem excepção',
+    async (_name, make) => {
+      const load: DocumentLoader = async () => {
+        throw make()
+      }
+      let out!: Awaited<ReturnType<typeof importDocument>>
+      await expect(
+        (async () => {
+          out = await importDocument(
+            { name: 'a.dxf', bytes: toBuffer(buildDxf({ texts: TEXTS })) },
+            { dwg: 'ok', load }
+          )
+        })()
+      ).resolves.toBeUndefined()
+      expect(out).toMatchObject({
+        ok: false,
+        failure: { code: 'parse', stage: 'convert' }
+      })
+    }
+  )
 })
 
 describe('layouts', () => {

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { IMPORT_MESSAGES } from '../src/import/errors'
 import { MAX_BASE64_BYTES } from '../src/import/limits'
 import {
   decodeBase64,
   isLocalAssetUrl,
   readOpenSource
 } from '../src/import/source'
+import { HOSTILE_ERRORS, instanceofHostileProxy } from './helpers/hostileErrors'
 
 const b64 = (s: string) => Buffer.from(s, 'latin1').toString('base64')
 
@@ -199,5 +201,57 @@ describe('readOpenSource', () => {
   test('fonte desconhecida → read-failed (nunca lança)', async () => {
     const r = await readOpenSource({ kind: 'ftp' } as never)
     expect(r.ok).toBe(false)
+  })
+
+  test.each(HOSTILE_ERRORS)(
+    'erro hostil do porto (%s) → read-failed sem lançar (nem String(error))',
+    async (_name, make) => {
+      const fetchBytes = async (): Promise<ArrayBuffer> => {
+        throw make()
+      }
+      const r = await readOpenSource(
+        { kind: 'url', url: 'http://127.0.0.1:8080/f1' },
+        { fetchBytes }
+      )
+      expect(r).toMatchObject({
+        ok: false,
+        failure: { code: 'read-failed', stage: 'source' }
+      })
+      if (!r.ok) {
+        // o texto ao utilizador é o fixo do código
+        expect(r.failure.message).toBe(IMPORT_MESSAGES['read-failed'])
+        expect(typeof (r.failure.detail ?? '')).toBe('string')
+      }
+    }
+  )
+
+  test('erro hostil lançado de forma síncrona pelo porto também é contido', async () => {
+    const fetchBytes = (): Promise<ArrayBuffer> => {
+      throw instanceofHostileProxy('falhou /data/x')
+    }
+    const r = await readOpenSource(
+      { kind: 'url', url: 'http://127.0.0.1:8080/f1' },
+      { fetchBytes }
+    )
+    expect(r).toMatchObject({ ok: false, failure: { code: 'read-failed' } })
+    // a `message` string do proxy ainda é aproveitada, já redigida
+    if (!r.ok) expect(r.failure.detail).toBe('falhou <path>')
+  })
+
+  test('erro string e Error normais mantêm o detalhe (redigido)', async () => {
+    for (const thrown of ['texto livre', new Error('texto livre')]) {
+      const r = await readOpenSource(
+        { kind: 'url', url: 'http://127.0.0.1:8080/f1' },
+        {
+          fetchBytes: async () => {
+            throw thrown
+          }
+        }
+      )
+      expect(r).toMatchObject({
+        ok: false,
+        failure: { code: 'read-failed', detail: 'texto livre' }
+      })
+    }
   })
 })

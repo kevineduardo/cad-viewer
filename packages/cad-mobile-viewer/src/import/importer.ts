@@ -190,9 +190,12 @@ export async function importDocument(
     ok: false,
     failure
   })
+  // formato validado uma só vez: o `catch` final nunca volta a ler getters do pedido
+  let validatedFormat: ImportFormat | null = null
   try {
-    const { name, bytes } = request
+    const { name, bytes, declaredSize } = request
     const format = typeof name === 'string' ? detectImportFormat(name) : null
+    validatedFormat = format
     if (!format) {
       return fail(
         makeFailure('unsupported-ext', 'validate', 'extensão não é .dwg/.dxf')
@@ -210,15 +213,12 @@ export async function importDocument(
         makeFailure('too-large', 'validate', `${byteLength} bytes (${format})`)
       )
     }
-    if (
-      request.declaredSize !== undefined &&
-      request.declaredSize !== byteLength
-    ) {
+    if (declaredSize !== undefined && declaredSize !== byteLength) {
       return fail(
         makeFailure(
           'read-failed',
           'validate',
-          `tamanho real ${byteLength} ≠ anunciado ${request.declaredSize}`
+          `tamanho real ${byteLength} ≠ anunciado ${declaredSize}`
         )
       )
     }
@@ -312,7 +312,7 @@ export async function importDocument(
     // salvaguarda: um defeito interno nunca escapa como excepção
     return fail(
       mapOpenError(error, {
-        format: detectImportFormat(request?.name ?? '') ?? 'dxf',
+        format: validatedFormat ?? 'dxf',
         stage: 'inspect'
       })
     )

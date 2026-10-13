@@ -16,6 +16,7 @@ import {
 } from '@mlightcad/data-model'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
+import { messageOf } from './errors'
 import { hasEdgeSpaceOrControl } from './source'
 import type { DwgStatus } from './types'
 
@@ -92,7 +93,8 @@ export function registerDwg(
     }
     return {
       status: 'unavailable',
-      reason: error instanceof Error ? error.message : String(error)
+      // `messageOf` nunca lança (getters/proxies hostis; sem `String(error)`)
+      reason: messageOf(error) || 'erro desconhecido'
     }
   }
 }

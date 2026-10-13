@@ -104,11 +104,23 @@ function safeProp(error: unknown, key: 'message' | 'code' | 'name'): unknown {
   }
 }
 
-/** Só expõe uma `message` que seja string; qualquer outro tipo → ''. */
-function messageOf(error: unknown): string {
+/**
+ * Só expõe uma `message` que seja string; qualquer outro tipo → ''. Nunca
+ * lança (getters/proxies hostis) e nunca usa `String(error)`.
+ */
+export function messageOf(error: unknown): string {
   if (typeof error === 'string') return error
   const message = safeProp(error, 'message')
   return typeof message === 'string' ? message : ''
+}
+
+/** `error instanceof RangeError` sem nunca lançar (proxy com `getPrototypeOf` hostil). */
+function isRangeError(error: unknown): boolean {
+  try {
+    return error instanceof RangeError
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -154,7 +166,7 @@ export function mapOpenError(
   if (name === 'AbortError' || name === 'TimeoutError') {
     return makeFailure('timeout', stage, message)
   }
-  if (error instanceof RangeError || OOM_PATTERN.test(message)) {
+  if (isRangeError(error) || OOM_PATTERN.test(message)) {
     return makeFailure('oom', stage, message)
   }
   if (ctx.format === 'dwg' && NOT_REGISTERED_PATTERN.test(message)) {

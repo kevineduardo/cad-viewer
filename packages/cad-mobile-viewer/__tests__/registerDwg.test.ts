@@ -7,6 +7,7 @@ import {
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
 import { isLocalWorkerUrl, registerDwg } from '../src/import/registerDwg'
+import { HOSTILE_ERRORS, instanceofHostileProxy } from './helpers/hostileErrors'
 
 const WORKER = './assets/libredwg-parser-worker.js'
 
@@ -122,5 +123,73 @@ describe('registerDwg com o conversor LibreDWG REAL', () => {
     })
     expect(r.status).toBe('unavailable')
     expect(r.reason).toBe('registo recusado')
+  })
+
+  describe('erros hostis nunca escapam', () => {
+    test.each(HOSTILE_ERRORS)(
+      'createConverter lança %s → unavailable com motivo string (sem String(error))',
+      (_name, make) => {
+        const manager = { register: jest.fn(), unregister: jest.fn() }
+        let r!: ReturnType<typeof registerDwg>
+        expect(() => {
+          r = registerDwg(WORKER, {
+            workerSupported: true,
+            manager,
+            createConverter: () => {
+              throw make()
+            }
+          })
+        }).not.toThrow()
+        expect(r.status).toBe('unavailable')
+        expect(typeof r.reason).toBe('string')
+        expect(r.reason).not.toBe('')
+        expect(manager.register).not.toHaveBeenCalled()
+        expect(manager.unregister).toHaveBeenCalledWith('dwg')
+      }
+    )
+
+    test.each(HOSTILE_ERRORS)(
+      'register E unregister lançam %s → unavailable',
+      (_name, make) => {
+        const manager = {
+          register: () => {
+            throw make()
+          },
+          unregister: () => {
+            throw make()
+          }
+        }
+        const r = registerDwg(WORKER, {
+          workerSupported: true,
+          manager,
+          createConverter: cfg =>
+            ({ config: cfg }) as unknown as AcDbDatabaseConverter
+        })
+        expect(r.status).toBe('unavailable')
+        expect(typeof r.reason).toBe('string')
+      }
+    )
+
+    test('a `message` string de um proxy com instanceof hostil é aproveitada', () => {
+      const r = registerDwg(WORKER, {
+        workerSupported: true,
+        manager: { register: jest.fn(), unregister: jest.fn() },
+        createConverter: () => {
+          throw instanceofHostileProxy('wasm em falta')
+        }
+      })
+      expect(r).toEqual({ status: 'unavailable', reason: 'wasm em falta' })
+    })
+
+    test('valor lançado que não é Error nem string → motivo genérico', () => {
+      const r = registerDwg(WORKER, {
+        workerSupported: true,
+        manager: { register: jest.fn(), unregister: jest.fn() },
+        createConverter: () => {
+          throw 42
+        }
+      })
+      expect(r).toEqual({ status: 'unavailable', reason: 'erro desconhecido' })
+    })
   })
 })
