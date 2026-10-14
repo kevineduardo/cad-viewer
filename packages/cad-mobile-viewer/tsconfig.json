@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": [
+      "jest",
+      "node"
+    ],
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "baseUrl": "../..",
+    "paths": {
+      "@mlightcad/cad-simple-viewer/find": [
+        "packages/cad-simple-viewer/src/find/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "__tests__"
+  ]
+}
