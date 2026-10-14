@@ -6,6 +6,7 @@
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
+    "test": "jest --config ../../jest.config.ts --rootDir ../.. packages/cad-mobile-viewer",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src/ __tests__/"
   },
