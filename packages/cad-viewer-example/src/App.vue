@@ -28,6 +28,7 @@
         :disable-export="disableExport"
         @create="onViewerCreate"
         :base-url="BASE_URL"
+        :offline-version-url="OFFLINE_VERSION_URL"
       />
     </div>
   </div>
@@ -35,6 +36,7 @@
 
 <script setup lang="ts">
 import {
+  ACAP_URL_DATA_SOURCE_ID,
   type AcApDataSource,
   AcApDataSourceManager,
   type AcApDataSourceMenuItem,
@@ -63,6 +65,11 @@ import {
 } from './googleDriveEnv'
 import { initializeLocale } from './locale'
 import {
+  IS_OFFLINE_BUILD,
+  OFFLINE_VERSION_URL,
+  resolveCadDataBaseUrl
+} from './offline'
+import {
   getOneDriveEnvConfig,
   registerOneDriveFromEnv
 } from './onedriveEnv'
@@ -75,8 +82,9 @@ AcApSettingManager.configure({
 
 initializeLocale()
 
-const oneDriveEnv = getOneDriveEnvConfig()
-const googleDriveEnv = getGoogleDriveEnvConfig()
+// Cloud drives need the network; the offline bundle opens local files only.
+const oneDriveEnv = IS_OFFLINE_BUILD ? null : getOneDriveEnvConfig()
+const googleDriveEnv = IS_OFFLINE_BUILD ? null : getGoogleDriveEnvConfig()
 
 /**
  * Landing-page registry used before DocManager exists.
@@ -189,7 +197,7 @@ const initialize = () => {
   )
 }
 
-const BASE_URL = 'https://cdn.jsdelivr.net/gh/mlightcad/cad-data@main/'
+const BASE_URL = resolveCadDataBaseUrl()
 
 const showViewer = computed(
   () =>
@@ -225,6 +233,12 @@ const createNewDrawing = async () => {
 
 const onViewerCreate = async () => {
   initialize()
+  if (IS_OFFLINE_BUILD) {
+    // File > Open > URL needs the network.
+    AcApDocManager.instance.dataSourceManager.unregister(
+      ACAP_URL_DATA_SOURCE_ID
+    )
+  }
   const landingOneDrive = landingDataSources.get('onedrive')
   if (landingOneDrive) {
     // Reuse the landing MSAL client. A second PublicClientApplication for the

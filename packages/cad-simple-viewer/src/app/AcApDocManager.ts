@@ -90,6 +90,7 @@ import {
   eventBus
 } from '../editor'
 import { AcApPluginManager } from '../plugin/AcApPluginManager'
+import { acapRepairBlockTableOwners } from '../util/AcApRepairBlockTableOwners'
 import { isScriptQuitCommand, parseScriptLines } from '../util/AcApScriptParser'
 import { acapWithSecondaryDatabase } from '../util/AcApSecondaryDatabase'
 import { AcTrView2d } from '../view'

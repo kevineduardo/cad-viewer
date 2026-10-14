@@ -1,12 +1,13 @@
 import { existsSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { Alias, defineConfig } from 'vite'
+import { Alias, defineConfig, type Plugin } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 import svgLoader from 'vite-svg-loader'
 import { visualizer } from 'rollup-plugin-visualizer'
 import vue from '@vitejs/plugin-vue'
 import { examplePeerPackageAliases, exampleRollupOutput } from '../vite-config/pluginRollupOutput'
+import { selfHostPlugin } from './scripts/self-host.mjs'
 import {
   LIBREDWG_CONVERTER_PACKAGE,
   LIBREDWG_PARSER_WASM_FILE,
@@ -39,6 +40,28 @@ const LOCAL_MTEXT_RENDERER_WORKER = resolve(
   LOCAL_MTEXT_RENDERER_DIST,
   MTEXT_RENDERER_WORKER_FILE
 )
+
+/**
+ * `vite preview` serves `dist/offline/index.html` for `/offline/`; redirect
+ * `/offline` so the landing page's relative download links resolve there.
+ */
+function offlineTrailingSlashPlugin(): Plugin {
+  return {
+    name: 'cad-viewer-offline-trailing-slash',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const [pathname, query] = (req.url ?? '').split('?', 2)
+        if (pathname === '/offline') {
+          res.statusCode = 301
+          res.setHeader('Location', `/offline/${query ? `?${query}` : ''}`)
+          res.end()
+          return
+        }
+        next()
+      })
+    }
+  }
+}
 
 function isEnvFlagEnabled(name: string): boolean {
   const flag = process.env[name]
@@ -153,6 +176,24 @@ export default defineConfig(({ command, mode }) => {
     }
   }
 
+  // `--mode offline` builds the single-file bundle (scripts/build-offline.mjs):
+  // one JS chunk and every asset inlined so nothing is loaded from disk.
+  const isOfflineBundle = mode === 'offline'
+  if (isOfflineBundle) {
+    // Plugins that only work online (AI assistant, cloud drives) are left out.
+    const stub = resolve(__dirname, 'offline/stubs/unavailable-plugin.js')
+    aliases.unshift(
+      {
+        find: /^@mlightcad\/cad-agent-plugin\/style\.css$/,
+        replacement: resolve(__dirname, 'offline/stubs/empty.css')
+      },
+      {
+        find: /^@mlightcad\/cad-(?:agent|onedrive|google-drive)-plugin(?:\/register)?$/,
+        replacement: stub
+      }
+    )
+  }
+
   aliases.push(
     ...examplePeerPackageAliases(__dirname).filter(
       alias =>
@@ -173,6 +214,10 @@ export default defineConfig(({ command, mode }) => {
     : `./node_modules/@mlightcad/cad-simple-viewer/dist/${MTEXT_RENDERER_WORKER_FILE}`
 
   const plugins = [
+    offlineTrailingSlashPlugin(),
+    // Same-origin fonts/templates and the precaching service worker (online
+    // build only; the offline bundle embeds them and never registers it).
+    selfHostPlugin({ enabled: !isOfflineBundle }),
     vue(),
     svgLoader(),
     viteStaticCopy({
@@ -252,13 +297,20 @@ export default defineConfig(({ command, mode }) => {
     },
     build: {
       outDir: 'dist',
-      modulePreload: false,
+      // Preload the entry's static imports in parallel (flat waterfall) for
+      // the first paint; the offline bundle is a single inlined chunk.
+      modulePreload: isOfflineBundle ? false : { polyfill: false },
       minify: true,
+      ...(isOfflineBundle
+        ? { assetsInlineLimit: Number.MAX_SAFE_INTEGER, cssCodeSplit: false }
+        : {}),
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html')
         },
-        output: exampleRollupOutput
+        output: isOfflineBundle
+          ? { inlineDynamicImports: true }
+          : exampleRollupOutput
       }
     },
     plugins: plugins

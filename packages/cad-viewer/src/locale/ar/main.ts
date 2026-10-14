@@ -14,7 +14,8 @@ export default {
     exportPdf: 'تصدير إلى PDF',
     exportSvg: 'تصدير إلى SVG',
     exportImage: 'تصدير إلى صورة',
-    about: 'حول'
+    about: 'حول',
+    offlineVersion: 'النسخة دون اتصال'
   },
 
   ribbon: {

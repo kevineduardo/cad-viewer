@@ -9,7 +9,8 @@ export default {
     exportPdf: '导出为PDF',
     exportSvg: '导出为 SVG',
     exportImage: '导出图片',
-    about: '关于'
+    about: '关于',
+    offlineVersion: '离线版'
   },
   ribbon: {
     tab: {

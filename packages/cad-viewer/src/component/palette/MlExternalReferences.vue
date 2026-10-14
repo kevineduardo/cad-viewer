@@ -103,6 +103,7 @@
                   ...
                 </el-button>
                 <el-button
+                  class="ml-external-ref-from-url"
                   link
                   type="primary"
                   size="small"
