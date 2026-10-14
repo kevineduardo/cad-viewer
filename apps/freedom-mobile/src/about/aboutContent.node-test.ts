@@ -242,7 +242,7 @@ describe('inventário gerado (third-party.json, NOTICE, GPL-3.0.txt)', () => {
     ].join('\n')
     assert.doesNotMatch(
       blob,
-      /(\/home\/|\/mnt\/|C:\\|@aitra|kanban|equipa aitra@)/i
+      /(\/home\/|\/mnt\/|C:\\|@aitra|kanban|kevin|equipa aitra@)/i
     )
     assert.doesNotMatch(blob, /[\w.+-]+@[\w-]+\.[a-z]{2,}/i)
   })
