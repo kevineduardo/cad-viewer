@@ -23,7 +23,7 @@ export const APP_LICENSE_INFO = {
   "name": "Freedom DWG/CAD Viewer",
   "license": "GPL-3.0-or-later",
   "copyright": "Copyright (C) 2026 Equipa Aitra",
-  "copyrightPending": "Titular do copyright da app por confirmar (decisão do Kevin; L1 §4).",
+  "copyrightPending": "Titular do copyright da app por confirmar (decisão do responsável do projecto; L1 §4).",
   "sourceUrl": "SOURCE_URL_PENDING",
   "sourceUrlPending": "URL público do código-fonte por definir (EXT-1)."
 } as const
