@@ -1,0 +1,80 @@
+{
+  "buildSha": "12ef05bbde5f240b0558269ae19da8e987ae8801",
+  "appVersion": "0.0.0",
+  "chromium": "153.0.8010.12",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "deviceScaleFactor": 1,
+      "steps": {},
+      "meta": {
+        "app": "Versão da app: 0.0.0",
+        "viewer": "Versão do viewer: 1.15.7",
+        "sha": "Build (SHA): 12ef05bbde5f240b0558269ae19da8e987ae8801"
+      },
+      "targets": {
+        "count": 41,
+        "minW": 72.9,
+        "minH": 44,
+        "below44": []
+      },
+      "overflow": {
+        "docScrollW": 1280,
+        "innerW": 1280,
+        "mainScrollW": 1280,
+        "mainClientW": 1280
+      },
+      "gpl": {
+        "chars": 35027,
+        "completeVsFile": true
+      },
+      "gplViewTargets": [
+        {
+          "role": "button",
+          "label": "Voltar ao Acerca e licenças",
+          "w": 72.9,
+          "h": 44
+        }
+      ],
+      "externalRequests": []
+    },
+    "390px": {
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 3,
+      "steps": {},
+      "meta": {
+        "app": "Versão da app: 0.0.0",
+        "viewer": "Versão do viewer: 1.15.7",
+        "sha": "Build (SHA): 12ef05bbde5f240b0558269ae19da8e987ae8801"
+      },
+      "targets": {
+        "count": 41,
+        "minW": 72.9,
+        "minH": 44,
+        "below44": []
+      },
+      "overflow": {
+        "docScrollW": 390,
+        "innerW": 390,
+        "mainScrollW": 390,
+        "mainClientW": 390
+      },
+      "gpl": {
+        "chars": 35027,
+        "completeVsFile": true
+      },
+      "gplViewTargets": [
+        {
+          "role": "button",
+          "label": "Voltar ao Acerca e licenças",
+          "w": 72.9,
+          "h": 44
+        }
+      ],
+      "externalRequests": []
+    }
+  },
+  "failures": []
+}
