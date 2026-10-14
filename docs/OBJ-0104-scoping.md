@@ -6,7 +6,7 @@ Documento de scoping (apenas análise; nenhum código de produto, manifesto ou l
 
 | Item | Valor |
 |---|---|
-| Workspace | `/home/kevin/work/cad-viewer/.worktrees/t_69c32932` |
+| Workspace | `<workspace checkout>` |
 | Branch | `cad-viewer/t_69c32932-obj-0104-scoping-expo-mobile-freedom-dwg` |
 | HEAD de partida | `442a9195` (fix(find): jump to first hit from Find button and frame beside dock (#734)) |
 | `main` local | `a39bab9b` (feat: add Google Drive data source plugin (#709)); HEAD é descendente de `main` (merge-base = `a39bab9b`, 10+ commits à frente, incl. FIND #725/#734) |
