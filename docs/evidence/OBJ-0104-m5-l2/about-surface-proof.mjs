@@ -111,6 +111,10 @@ const { chromium } = createRequire(
 )('playwright')
 const browser = await chromium.launch({ channel: 'chromium' })
 const metrics = {
+  provenance: {
+    buildShaMeaning:
+      'git rev-parse HEAD no momento da execução = commit de código/testes sob prova; não é o HEAD do commit que guarda esta evidência'
+  },
   buildSha,
   appVersion,
   chromium: browser.version(),

@@ -12,6 +12,14 @@ export const View = 'View'
 export const Text = 'Text'
 export const ScrollView = 'ScrollView'
 export const Pressable = 'Pressable'
+export const TextInput = 'TextInput'
+
+/** `AppState` mínimo (o `ViewerScreen` só regista o listener `change`). */
+export const AppState = {
+  addEventListener(_type: 'change', _listener: (state: string) => void) {
+    return { remove: () => undefined }
+  }
+}
 
 export const StyleSheet = {
   create: <T>(styles: T): T => styles,

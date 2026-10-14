@@ -1,4 +1,12 @@
 {
+  "provenance": {
+    "buildShaMeaning": "git rev-parse HEAD no momento da execução = commit de código/testes sob prova; NÃO é o HEAD do commit que guarda esta evidência",
+    "codeCommit": "12ef05bbde5f240b0558269ae19da8e987ae8801",
+    "codeCommitNote": "último commit que altera código/testes do ecrã Acerca/Licenças (apps/freedom-mobile) neste rework",
+    "evidenceCommit": "94b7f4be67aa79720ffaa3e063347c558fa20c32",
+    "evidenceCommitNote": "commit só de docs (docs/evidence/OBJ-0104-m5-l2/**) que adicionou estes ficheiros; `git diff 12ef05bb 94b7f4be` não toca em apps/",
+    "laterCommits": "commits posteriores (follow-up t_c0050506) só acrescentam testes/docs e não alteram o ecrã medido; o HEAD actual do ramo é por definição posterior a ambos"
+  },
   "buildSha": "12ef05bbde5f240b0558269ae19da8e987ae8801",
   "appVersion": "0.0.0",
   "chromium": "153.0.8010.12",
