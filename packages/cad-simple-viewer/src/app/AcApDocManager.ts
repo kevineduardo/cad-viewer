@@ -2323,6 +2323,8 @@ export class AcApDocManager {
       // Sync once at open (not in setActiveLayout) so later Model-tab visits
       // survive session reactivation. Do this before documentActivated so
       // layout tabs snapshot the correct active layout.
+      // Before anything looks layouts up by id (FIND, layout switching).
+      acapRepairBlockTableOwners(db)
       syncCurrentSpaceFromTileMode(db)
       this.setActiveLayout(view, db)
       view.syncDisplaySysVars(db)
