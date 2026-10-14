@@ -13,7 +13,7 @@ const fixturePath = path.resolve(
   'find-layouts.dxf'
 )
 /** find-layouts.dxf + block CARIMBO (plain TEXT, no attributes) inserted at
- * (900, -200) with scale 2; its text "Projeto Escola Aitra" sits at (10, 5). */
+ * (900, -200) with scale 2; its text "Projeto Escola Modelo" sits at (10, 5). */
 const blocksFixturePath = path.resolve(
   currentDir,
   '..',
@@ -274,6 +274,16 @@ test.describe('Find palette (full Vue UI)', () => {
       .poll(async () => (await viewerState(page)).layout)
       .toBe('Planta')
   })
+
+  test('Find button searches and jumps to the first hit', async ({ page }) => {
+    await openFind(page)
+    await search(page, 'sala')
+    await expect
+      .poll(async () => (await viewerState(page)).selected)
+      .toEqual(['B1'])
+    await expect(rows(page).first()).toHaveClass(/is-selected/)
+  })
+
   test('Ctrl+F opens the palette instead of the browser page search', async ({
     page
   }) => {
@@ -296,7 +306,7 @@ test.describe('Find palette (full Vue UI)', () => {
     await openFind(page, blocksFixturePath)
     await search(page, 'escola')
     await expect(rows(page)).toHaveCount(1)
-    expect(await results(page)).toEqual(['Model | Projeto Escola Aitra'])
+    expect(await results(page)).toEqual(['Model | Projeto Escola Modelo'])
     await expect(rows(page).first()).toContainText('Block text')
 
     await rows(page).first().click()

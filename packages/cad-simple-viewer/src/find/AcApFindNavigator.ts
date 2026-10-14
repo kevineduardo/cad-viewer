@@ -6,7 +6,6 @@ import {
 
 import type { AcApDocManager } from '../app/AcApDocManager'
 import { acapFindHitBox, type AcApFindLayoutHit } from './findDrawing'
-import { acapGetFindBlockRecord } from './findText'
 
 /** Options for {@link acapNavigateToFindHit}. */
 export interface AcApFindNavigateOptions {
@@ -160,22 +159,18 @@ export async function acapNavigateToFindHit(
 
   if (view.activeLayoutBtrId !== hit.layoutId) {
     if (options.activateLayout === false) return 'layout-mismatch'
-    if (!acapGetFindBlockRecord(db, hit.layoutId)) return 'layout-missing'
+    if (!db.tables.blockTable.getIdAt(hit.layoutId)) return 'layout-missing'
 
-    // The switch itself registers the layout as visited, so capture this first.
-    const firstVisit = !view.isLayoutInitialized(hit.layoutId)
+    if (!view.isLayoutInitialized(hit.layoutId)) {
+      // We frame the layout ourselves; keep its first-visit auto zoom from
+      // running afterwards and overriding the zoom to the hit.
+      view.markLayoutAsInitialized(hit.layoutId)
+    }
     acdbHostApplicationServices().layoutManager.setCurrentLayoutBtrId(
       hit.layoutId,
       db
     )
     if (view.activeLayoutBtrId !== hit.layoutId) return 'layout-switch-failed'
-
-    if (firstVisit) {
-      // We frame the layout ourselves; mark it only once the switch succeeded
-      // (a failed switch keeps its first-visit auto zoom) and before any await
-      // so the view's deferred first-visit zoom is suppressed.
-      view.markLayoutAsInitialized(hit.layoutId)
-    }
 
     await view.waitUntilIdle(options.idleTimeoutMs ?? 15_000)
     if (navigationTokens.get(view) !== token) return 'stale'

@@ -13,8 +13,10 @@
  * - `TEXT` / `MTEXT` / `ATTRIB` inside the block definition of every `INSERT`
  *   (nested blocks included, anonymous/dynamic blocks too): title blocks,
  *   legends and labels are usually drawn this way
- * - `DIMENSION` — the displayed text (from the dimension block when present,
- *   otherwise the override text)
+ * - constant `ATTDEF` values inside block definitions (the only ATTDEFs that
+ *   are drawn inside a block; templates get their value from an `ATTRIB`)
+ * - `DIMENSION` — the text of its dimension block when that block has a
+ *   match, otherwise the override text (`dimensionText`)
  * - `MULTILEADER` — its MTEXT contents
  * - `ACAD_TABLE` — the cell text (from the table block when present,
  *   otherwise the cell strings)
@@ -96,48 +98,24 @@ export interface AcApFindResult {
 type EntityLike = any
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-/** Block table record (layout or block definition) used by the search. */
-export interface AcApFindBlockRecordLike {
-  newIterator(): Iterable<EntityLike>
-  /** Used to resolve the matched entity for zoom extents. */
-  getIdAt?(id: string): EntityLike
-}
-
 /** Minimal database shape used by the search. */
 export interface AcApFindDatabaseLike {
   tables: {
     blockTable: {
       /** Block definition by name; used to search text inside blocks. */
       getAt?(name: string): { newIterator(): Iterable<EntityLike> } | undefined
-      getIdAt(id: string): AcApFindBlockRecordLike | undefined
-      /** All records; fallback for records `getIdAt` rejects. */
-      newIterator?(): Iterable<AcApFindBlockRecordLike & { objectId?: string }>
+      getIdAt(id: string):
+        | {
+            newIterator(): Iterable<EntityLike>
+            /** Used to resolve the matched entity for zoom extents. */
+            getIdAt?(id: string): EntityLike
+          }
+        | undefined
     }
     layerTable?: {
       getAt(name: string): { isOff?: boolean; isFrozen?: boolean } | undefined
     }
   }
-}
-
-/**
- * Block table record with the given id.
- *
- * `blockTable.getIdAt` also requires the record's owner to be the block
- * table. Some DWG files store `*MODEL_SPACE` with a wrong owner id, so
- * `getIdAt` rejects it although it is in the table (and drawn); FIND would
- * then never search model space. Fall back to the table's own records.
- */
-export function acapGetFindBlockRecord(
-  db: AcApFindDatabaseLike,
-  id: string
-): AcApFindBlockRecordLike | undefined {
-  const table = db.tables.blockTable
-  const record = table.getIdAt(id)
-  if (record) return record
-  for (const candidate of table.newIterator?.() ?? []) {
-    if (candidate.objectId === id) return candidate
-  }
-  return undefined
 }
 
 const DIACRITICS = /[̀-ͯ]/g
@@ -325,7 +303,7 @@ export function acapFindTextInLayout(
   const result: AcApFindResult = { hits: [], truncated: false }
   if (!needle) return result
 
-  const btr = acapGetFindBlockRecord(db, layoutBtrId)
+  const btr = db.tables.blockTable.getIdAt(layoutBtrId)
   if (!btr) return result
 
   const layers = new Map<string, boolean>()
@@ -385,11 +363,21 @@ export function acapFindTextInLayout(
         type !== 'TEXT' &&
         type !== 'MTEXT' &&
         type !== 'INSERT' &&
-        type !== 'ATTRIB'
+        type !== 'ATTRIB' &&
+        type !== 'ATTDEF'
       ) {
         continue
       }
       if (entity.visibility === false) continue
+      // Only constant ATTDEFs are drawn inside a block (their default value
+      // is geometry); the others get their value from an ATTRIB of the INSERT.
+      if (
+        type === 'ATTDEF' &&
+        (entity.isInvisible ||
+          !(entity.isConst || entity.isConstMTextAttribute))
+      ) {
+        continue
+      }
       // Layer 0 inside a block inherits the owner's layer (already checked).
       if (
         entity.layer &&
@@ -431,12 +419,24 @@ export function acapFindTextInLayout(
         stack.delete(name)
         continue
       }
-      const text =
-        type === 'MTEXT'
-          ? acapMTextToPlainText(String(entity.contents ?? ''))
-          : plainText(entity.textString)
+      const isMText =
+        type === 'MTEXT' ||
+        (type === 'ATTDEF' && entity.isConstMTextAttribute && entity.mtext)
+      const text = isMText
+        ? acapMTextToPlainText(
+            String((type === 'MTEXT' ? entity : entity.mtext).contents ?? '')
+          )
+        : plainText(entity.textString)
       if (!matches(text)) continue
-      pushNested(owner, path, entity, owner.kind, text, m)
+      pushNested(
+        owner,
+        path,
+        entity,
+        owner.kind,
+        text,
+        m,
+        type === 'ATTDEF' ? { tag: entity.tag } : {}
+      )
     }
   }
 
@@ -448,7 +448,7 @@ export function acapFindTextInLayout(
       if (table?.newIterator)
         return table as { newIterator(): Iterable<EntityLike> }
       const id = entity.dimBlockId
-      const byId = id ? acapGetFindBlockRecord(db, id) : undefined
+      const byId = id ? db.tables.blockTable.getIdAt(id) : undefined
       if (byId) return byId
       const name = entity.blockName
       return name ? db.tables.blockTable.getAt?.(name) : undefined
@@ -522,8 +522,8 @@ export function acapFindTextInLayout(
         )
       }
       if (block && result.hits.length > before) continue
-      if (block && type === 'DIMENSION') continue
-      // No block (or a table block without text): use the stored strings.
+      // No block, or a block without a matching text: use the stored strings
+      // (a dimension override can differ from what the block text shows).
       const texts: string[] = []
       if (type === 'DIMENSION') {
         const override = String(entity.dimensionText ?? '')

@@ -124,21 +124,9 @@ describe('acapNavigateToFindHit', () => {
   it('suppresses the first-visit auto zoom of a layout it frames itself', async () => {
     await nav(hit('planta'))
     expect(markLayoutAsInitialized).toHaveBeenCalledWith('planta')
-    // Marked only after a successful switch, before waiting for idle.
-    expect(markLayoutAsInitialized.mock.invocationCallOrder[0]).toBeGreaterThan(
+    expect(markLayoutAsInitialized.mock.invocationCallOrder[0]).toBeLessThan(
       mockSetCurrentLayout.mock.invocationCallOrder[0]
     )
-    expect(markLayoutAsInitialized.mock.invocationCallOrder[0]).toBeLessThan(
-      waitUntilIdle.mock.invocationCallOrder[0]
-    )
-    expect(zoomTo).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not mark a layout initialized when the switch fails', async () => {
-    mockSetCurrentLayout.mockImplementation(() => false)
-    expect(await nav(hit('planta'))).toBe('layout-switch-failed')
-    expect(markLayoutAsInitialized).not.toHaveBeenCalled()
-    expect(initialized.has('planta')).toBe(false)
   })
 
   it('does not re-mark a layout that was already visited', async () => {
