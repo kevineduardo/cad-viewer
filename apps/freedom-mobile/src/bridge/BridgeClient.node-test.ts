@@ -726,7 +726,7 @@ describe('BridgeClient — late ready recovery (decisão de shellState.ts)', () 
   })
 })
 
-describe('BridgeClient — rework M1-B2 (t_ffb4eb41)', () => {
+describe('BridgeClient — rework M1-B2', () => {
   /** Inject que lança enquanto `failing(msg)` for verdadeiro. */
   function setupFlaky(failing: (m: AppMessage) => boolean) {
     const injected: AppMessage[] = []

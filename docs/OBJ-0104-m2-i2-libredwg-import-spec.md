@@ -1,6 +1,6 @@
 # OBJ-0104 · M2 I2 — Spec e plano: camada de importação/conversão LibreDWG (DWG+DXF)
 
-Card `t_81af5694` (milestone M2-I2). Fonte vinculativa: `docs/OBJ-0104-architecture.md` D-2, D-3, D-5, §§3.2–4, §5.2 (`open`/`opened`/`openFailed`), §6.2, §6.4 e §11. **Fora de âmbito**: servidor local (I5), UI/ecrã de licenças, publicação, qualquer alteração ou contacto com o upstream `mlightcad`, credenciais externas, `AcApDocManager`/UI/FIND (I1/I3), bundle Vite/assets/`MANIFEST.json` (B2).
+Tarefa interna (milestone M2-I2). Fonte vinculativa: `docs/OBJ-0104-architecture.md` D-2, D-3, D-5, §§3.2–4, §5.2 (`open`/`opened`/`openFailed`), §6.2, §6.4 e §11. **Fora de âmbito**: servidor local (I5), UI/ecrã de licenças, publicação, qualquer alteração ou contacto com o upstream `mlightcad`, credenciais externas, `AcApDocManager`/UI/FIND (I1/I3), bundle Vite/assets/`MANIFEST.json` (B2).
 
 ## 1. Desvios e interpretação (a registar)
 

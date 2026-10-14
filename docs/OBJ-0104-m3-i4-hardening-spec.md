@@ -1,6 +1,6 @@
 # OBJ-0104 · M3 I4 — Spec e plano: endurecer renderização, seleção, zoom e FIND (sessão do viewer)
 
-Card `t_4edf983e` (milestone M3-I4). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, D-4, §11; handoff de `docs/OBJ-0104-m2-i3-entity-mapping-spec.md` §7 (aprovado em `23ea4506`). **Fora de âmbito**: servidor local (I5), publicação/licenças, upstream `mlightcad` (D-5), alterações de contrato fora do viewer (`apps/**` só lido em testes de deriva), web/API/e2e globais, `jest.config.ts`, `pnpm-lock.yaml`, pacotes upstream. Os minors não bloqueantes do M2-I3 (dependência directa de `cad-simple-viewer/find`, limites da sonda DWG, IDs duplicados, truncagem/vista por omissão, texto de `empty-layout`, DWG real) pertencem ao card de follow-up e **não** são tratados aqui.
+Tarefa interna (milestone M3-I4). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, D-4, §11; handoff de `docs/OBJ-0104-m2-i3-entity-mapping-spec.md` §7 (aprovado em `23ea4506`). **Fora de âmbito**: servidor local (I5), publicação/licenças, upstream `mlightcad` (D-5), alterações de contrato fora do viewer (`apps/**` só lido em testes de deriva), web/API/e2e globais, `jest.config.ts`, `pnpm-lock.yaml`, pacotes upstream. Os minors não bloqueantes do M2-I3 (dependência directa de `cad-simple-viewer/find`, limites da sonda DWG, IDs duplicados, truncagem/vista por omissão, texto de `empty-layout`, DWG real) pertencem ao card de follow-up e **não** são tratados aqui.
 
 ## 1. Desvios e interpretação (a registar)
 

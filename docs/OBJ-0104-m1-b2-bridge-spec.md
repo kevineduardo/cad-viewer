@@ -43,7 +43,7 @@ Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§2, 5–7, 11 e D-4. Sem p
 | `jest --listTests` (raiz) em `/apps/`                                                                              | 0                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Base `ecf4cd34` (159/159) vs HEAD de código `c09dafa4` (162/162)                                                   | `ecf4cd34..c09dafa4` altera só 4 ficheiros em `apps/freedom-mobile/src/{bridge,state}/**` (+2 testes BridgeClient, +1 teste find, 1 teste find reescrito): sem regressão (159 → 162, 0 falhas). Os 28 testes do B1 + 3 de recuperação tardia (shell) + 12 de recuperação tardia + 10 do rework `15049280`/`ecf4cd34` mantêm-se verdes; sem ficheiros fora de `apps/freedom-mobile/**` e `docs/OBJ-0104-*` |
 
-Ponto de verificação: os gates acima foram executados no commit de código `c09dafa411fe383fc709af384e032cc34cc7dc55`. Os commits seguintes desta branch que só tocam `docs/OBJ-0104-m1-b2-bridge-spec.md` (reconciliação docs-only do card `t_82f2809e`) não alteram `apps/**`: `git diff c09dafa4..HEAD --name-only` lista apenas este ficheiro, logo os resultados valem também para o HEAD docs-only. O SHA completo desse commit docs-only não pode constar do próprio ficheiro que ele introduz; obtém-se com `git log -1 --format=%H -- docs/OBJ-0104-m1-b2-bridge-spec.md` e vem no relatório do card.
+Ponto de verificação: os gates acima foram executados no commit de código `c09dafa411fe383fc709af384e032cc34cc7dc55`. Os commits seguintes desta branch que só tocam `docs/OBJ-0104-m1-b2-bridge-spec.md` (reconciliação docs-only do tarefa interna) não alteram `apps/**`: `git diff c09dafa4..HEAD --name-only` lista apenas este ficheiro, logo os resultados valem também para o HEAD docs-only. O SHA completo desse commit docs-only não pode constar do próprio ficheiro que ele introduz; obtém-se com `git log -1 --format=%H -- docs/OBJ-0104-m1-b2-bridge-spec.md` e vem no relatório do card.
 
 ## 5. Limitações / pendentes
 
@@ -53,39 +53,39 @@ Ponto de verificação: os gates acima foram executados no commit de código `c0
 - `jest.config.ts` não tocado (testes `*.node-test.ts`).
 - O commit `db9f45ab` (TypeScript ~6.0.3, `package.json`/lock) é de outra sessão (engineer-glm), anterior a este card.
 
-## 6. Âmbito face ao follow-up `t_254a5902` (reconciliação)
+## 6. Âmbito face ao follow-up tarefa interna (reconciliação)
 
 Fontes vinculativas (`docs/OBJ-0104-architecture.md`):
 
 - §3.2 «Permitido»: «`apps/freedom-mobile/**`, `packages/cad-mobile-viewer/**`, `docs/OBJ-0104-*.md`, `jest.config.ts` (só `testPathIgnorePatterns`/`moduleNameMapper` para o novo pacote), …». Todos os 28 ficheiros de `origin/main..HEAD` caem em `apps/freedom-mobile/**` ou `docs/OBJ-0104-*.md`; `jest.config.ts`, `packages/**` e `pnpm-lock.yaml` não são tocados.
 - §11, linha **I2**: «Toca: … `apps/freedom-mobile/src/bridge/BridgeClient.ts`, …»; linha **I3**: «Toca: `apps/freedom-mobile/src/screens/Find*.tsx`, `src/state/find.ts`. Não toca viewer.». `BridgeClient.ts` e `state/find.ts` são, portanto, caminhos previstos; `contracts/protocol.ts` (tipos §5.2), `state/{document,session,describe}.ts` e `ViewerScreen`/`ViewerSurface` ficam sob o «Permitido» de §3.2 e implementam §5–§6.4 e D-4.
-- Card `t_c3ae146f` (M1 B2), fonte «`docs/OBJ-0104-architecture.md` §2, §5–§7, §11, D-4»: é o card de implementação vivo desta branch partilhada e autoriza o contrato, o cliente e o estado.
+- Tarefa interna (M1 B2), fonte «`docs/OBJ-0104-architecture.md` §2, §5–§7, §11, D-4»: é o card de implementação vivo desta branch partilhada e autoriza o contrato, o cliente e o estado.
 
 Classificação do delta `origin/main..HEAD`:
 
 | Grupo                                                                                                                                                                                                        | Commits                                                    | Pertence a                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------ |
 | Docs/arquitectura, shell B1, specs B1                                                                                                                                                                        | `e60893ce` … `d1568b73`                                    | stream do objectivo (M0/M1-B1), já revisto |
-| Follow-up TypeScript `~6.0.3` (`package.json`, lock)                                                                                                                                                         | `db9f45ab`                                                 | `t_c2d1877c`                               |
-| Follow-up `ready` tardio, camada shell (`shellState.ts` + teste)                                                                                                                                             | `531f82ef`                                                 | `t_37f549f1`                               |
-| Rework: recuperação coerente BridgeClient/shell/documento + testes (`BridgeClient.node-test`, `document`, `session`)                                                                                         | `fde7b3e8`                                                 | `t_254a5902` (finding 2)                   |
+| Follow-up TypeScript `~6.0.3` (`package.json`, lock)                                                                                                                                                         | `db9f45ab`                                                 | tarefa interna                               |
+| Follow-up `ready` tardio, camada shell (`shellState.ts` + teste)                                                                                                                                             | `531f82ef`                                                 | tarefa interna                               |
+| Rework: recuperação coerente BridgeClient/shell/documento + testes (`BridgeClient.node-test`, `document`, `session`)                                                                                         | `fde7b3e8`                                                 | tarefa interna (finding 2)                   |
 | Rework fail-closed: `open-failed`/`send-failed` no `open` enfileirado, `find-navigation-failed`, protecção de operações activas na evicção, `invalid-index` + testes (BridgeClient, describe, find, session) | `15049280`                                                 | rework M1-B2                               |
 | Teste: a resposta `find` em curso sobrevive à enxurrada de `zoom`                                                                                                                                            | `ecf4cd34`                                                 | rework M1-B2                               |
 | Rework M2/M3: rejeição `not-ready` correlacionada (`BridgeClient.ts`) e `invalid-index` fail-closed (`state/find.ts`) + testes                                                                               | `c09dafa4`                                                 | rework M1-B2                               |
-| Contrato, `BridgeClient`, estado, ecrã, esta spec                                                                                                                                                            | `bafa36d9`, `53b4013c`, `ece6717a`, `36a7ecee`, `80a72923` | `t_c3ae146f` (M1-B2), **não** do follow-up |
+| Contrato, `BridgeClient`, estado, ecrã, esta spec                                                                                                                                                            | `bafa36d9`, `53b4013c`, `ece6717a`, `36a7ecee`, `80a72923` | tarefa interna (M1-B2), **não** do follow-up |
 
 O follow-up original é independente do M1-B2: `db9f45ab` + `531f82ef` aplicados sobre `d1568b73` (sem nenhum commit M1-B2) alteram só `package.json`, `package-lock.json`, `shellState.ts` e `shellState.node-test.ts`, e passam `npm test` (31/31), `npm run typecheck`, `expo install --check` e `git diff --check`. Só o `fde7b3e8` toca ficheiros M1-B2, porque a recuperação tardia exigida pelo rework atravessa o `BridgeClient` e o estado do documento, que só existem no M1-B2.
 
 Desvios que **esta spec não ratifica** (decisão do CTO/Kevin):
 
 1. **Ordem**: §11 sequencia «B0 → B1 → B2 → S1 → I1/T1 → I2 → I3», i.e. `BridgeClient`/`find.ts` (I2/I3) depois de S1/I1; o card M1-B2 antecipou o lado app. Os caminhos são os do §11/§3.2; a antecipação não está prevista.
-2. **Boundaries do card `t_c3ae146f`** («Somente `apps/viewer/**` e `packages/viewer/**`»): caminhos inexistentes; a arquitectura fixa `apps/freedom-mobile/` (D-9, §3.1). Ver §1.
+2. **Boundaries do tarefa interna** («Somente `apps/viewer/**` e `packages/viewer/**`»): caminhos inexistentes; a arquitectura fixa `apps/freedom-mobile/` (D-9, §3.1). Ver §1.
 
-Os commits `15049280`, `ecf4cd34` e `c09dafa4` são rework M1-B2 posterior (só `apps/freedom-mobile/src/**`), não pertencem ao follow-up `t_254a5902`; o gate vigente é **162/162 em `c09dafa411fe383fc709af384e032cc34cc7dc55`** (159/159 em `ecf4cd34` e 149/149 na base `80a72923` são valores históricos).
+Os commits `15049280`, `ecf4cd34` e `c09dafa4` são rework M1-B2 posterior (só `apps/freedom-mobile/src/**`), não pertencem ao follow-up tarefa interna; o gate vigente é **162/162 em `c09dafa411fe383fc709af384e032cc34cc7dc55`** (159/159 em `ecf4cd34` e 149/149 na base `80a72923` são valores históricos).
 
-Consequência para a revisão do follow-up: rever `db9f45ab`, `531f82ef` e `fde7b3e8` (base `d1568b73`), não `origin/main..HEAD` inteiro; os restantes commits M1-B2 são revistos no card `t_c3ae146f`.
+Consequência para a revisão do follow-up: rever `db9f45ab`, `531f82ef` e `fde7b3e8` (base `d1568b73`), não `origin/main..HEAD` inteiro; os restantes commits M1-B2 são revistos no tarefa interna.
 
-## 7. Follow-up `t_fc841e51` (integrado do `origin/main` na reconciliação `t_84c9845f`; não é M1-B2)
+## 7. Follow-up tarefa interna (integrado do `origin/main` na reconciliação tarefa interna; não é M1-B2)
 
 O squash `9c7fd2c5` (#735) em `origin/main` traz, além de um estado anterior de M1-B2, um único comportamento que esta branch não tinha: um `open` em fila ou em curso apanhado por `process-gone` não pode desaparecer em silêncio.
 

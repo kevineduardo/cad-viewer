@@ -1,6 +1,6 @@
 # OBJ-0104 M4-T2 — Matriz de regressão e gates
 
-Card `t_c13af675`. Âmbito: **só validação** (consolida a suite aplicável e torna-a reproduzível). Sem funcionalidade nova, sem aconselhamento jurídico, sem contacto upstream/publicação. Fonte: `docs/OBJ-0104-architecture.md` §7, §10–§11 (linha T2).
+Tarefa interna. Âmbito: **só validação** (consolida a suite aplicável e torna-a reproduzível). Sem funcionalidade nova, sem aconselhamento jurídico, sem contacto upstream/publicação. Fonte: `docs/OBJ-0104-architecture.md` §7, §10–§11 (linha T2).
 
 **Separação explícita (critério 2):** os gates de licenciamento (L1–L3) e a publicação (§11, D-7) são cards posteriores e **não** entram nesta matriz; um gate técnico vermelho nunca se resolve com um artefacto de licença. Publicação só depois de T2 verde + L3 + EXT-1/EXT-2.
 

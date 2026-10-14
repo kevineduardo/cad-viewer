@@ -501,7 +501,7 @@ describe('session — failures are never silent', () => {
   })
 })
 
-describe('session — rework M1-B2 (t_ffb4eb41): bridge failures end explicitly', () => {
+describe('session — rework M1-B2: bridge failures end explicitly', () => {
   const OPEN = {
     name: 'b.dxf',
     size: 1,

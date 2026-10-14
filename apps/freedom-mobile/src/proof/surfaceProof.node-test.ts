@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Prova de superfície real (card M4-I6 rework; decisão t_d2446cfc, arquitectura
+// Prova de superfície real (card M4-I6 rework; decisão de arquitectura, arquitectura
 // §7 item 6), pelo CAMINHO DA APP: `startViewerSession` (o mesmo ciclo de vida
 // do `ViewerScreen`) cria o `LocalAssetServer` sobre o listener HTTP do app
 // (`createTcpHttpListener`, aqui com o `net` do Node em 127.0.0.1; no

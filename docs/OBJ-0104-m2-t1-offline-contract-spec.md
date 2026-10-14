@@ -1,6 +1,6 @@
 # OBJ-0104 · M2 T1 — Spec e plano: testes do contrato offline app ↔ viewer
 
-Card `t_44ecd16c` (OBJ-0104 M2 T1, `session_key OBJ-0104-M2-T1`). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, 10–11 e decisões D-2…D-5. **Fora de âmbito**: implementação de produto adicional, servidor local, parser/conversor DWG/DXF, publicação/licenciamento/upstream. Só testes e fixtures sintéticas offline, com proveniência documentada.
+Tarefa interna (OBJ-0104 M2 T1, `session_key OBJ-0104-M2-T1`). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, 10–11 e decisões D-2…D-5. **Fora de âmbito**: implementação de produto adicional, servidor local, parser/conversor DWG/DXF, publicação/licenciamento/upstream. Só testes e fixtures sintéticas offline, com proveniência documentada.
 
 ## 1. Desvios e interpretação (a registar)
 

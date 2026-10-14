@@ -1,6 +1,6 @@
 # OBJ-0104 · M2 I1 — Spec e plano: fluxo offline de ficheiros até à entrada do viewer
 
-Card `t_a3c89c48` (milestone M2-I1). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§3, 4, 6, 9 e 11 (cards I1/I5 do plano), decisões D-1…D-5 e D-10. **Fora de âmbito**: servidor HTTP local (I5), parser/conversor DWG/DXF, licenças/publicação, upstream. O fluxo termina no **ponto de entrada do viewer** = `BridgeClient.open(payload)`; o que acontece depois (`opened`/`openFailed`) é consumido só para gerir o ciclo de vida dos assets.
+Tarefa interna (milestone M2-I1). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§3, 4, 6, 9 e 11 (cards I1/I5 do plano), decisões D-1…D-5 e D-10. **Fora de âmbito**: servidor HTTP local (I5), parser/conversor DWG/DXF, licenças/publicação, upstream. O fluxo termina no **ponto de entrada do viewer** = `BridgeClient.open(payload)`; o que acontece depois (`opened`/`openFailed`) é consumido só para gerir o ciclo de vida dos assets.
 
 ## 1. Desvios e interpretação (a registar)
 

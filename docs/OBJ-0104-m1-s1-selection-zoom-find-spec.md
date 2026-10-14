@@ -1,6 +1,6 @@
 # OBJ-0104 · M1 S1 — Spec e plano: seleção, zoom e FIND exercitados com fixtures sintéticas
 
-Card `t_57f3463a` (milestone M1-S1). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, §11 e D-4. **Sem parser, sem conversor DWG/DXF, sem ponte de ficheiros, sem servidor local, sem publicação/licença/upstream.** As fixtures são dados sintéticos (texto + layouts), não DXF/DWG: nada aqui prova suporte de formato (isso é I2/I3, S1 de arquitectura e T2).
+Tarefa interna (milestone M1-S1). Fonte vinculativa: `docs/OBJ-0104-architecture.md` §§5–7, §11 e D-4. **Sem parser, sem conversor DWG/DXF, sem ponte de ficheiros, sem servidor local, sem publicação/licença/upstream.** As fixtures são dados sintéticos (texto + layouts), não DXF/DWG: nada aqui prova suporte de formato (isso é I2/I3, S1 de arquitectura e T2).
 
 ## 1. Desvios de caminho e de fronteira (a registar)
 

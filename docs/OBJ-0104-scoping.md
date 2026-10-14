@@ -6,8 +6,8 @@ Documento de scoping (apenas análise; nenhum código de produto, manifesto ou l
 
 | Item | Valor |
 |---|---|
-| Workspace | `/home/kevin/work/cad-viewer/.worktrees/t_69c32932` |
-| Branch | `cad-viewer/t_69c32932-obj-0104-scoping-expo-mobile-freedom-dwg` |
+| Workspace | `<repo>` |
+| Branch | `<branch-de-trabalho>` |
 | HEAD de partida | `442a9195` (fix(find): jump to first hit from Find button and frame beside dock (#734)) |
 | `main` local | `a39bab9b` (feat: add Google Drive data source plugin (#709)); HEAD é descendente de `main` (merge-base = `a39bab9b`, 10+ commits à frente, incl. FIND #725/#734) |
 | Base citada no contrato do card | `b5ca1246` ("fix(example): restore IS_OFFLINE_BUILD import lost when merging self-host and offline branches") |
@@ -19,7 +19,7 @@ Estado final (`git status --short`, `git diff --stat`, `git diff --check`) no §
 
 ## 1. Método
 
-1. `list_projects` (codebase-memory): não havia projecto para `t_69c32932` → `index_repository` (fast) → `home-kevin-work-cad-viewer-.worktrees-t_69c32932` (14 842 nós / 55 325 arestas; TS 877, Vue 76).
+1. `list_projects` (codebase-memory): não havia projecto para tarefa interna → `index_repository` (fast) → `<projecto-indexado>` (14 842 nós / 55 325 arestas; TS 877, Vue 76).
 2. `get_architecture`, `search_graph` (FIND), `search_code` (libredwg), `trace_path` (`acapFindText`, `acapNavigateToFindHit`).
 3. Só depois `Read`/`grep`/`ls` para manifestos, fixtures e confirmação de código.
 4. `check_index_coverage` nos 15 caminhos de evidência: 12 `no_recorded_issue`; **3 `excluded`/`not_tracked`** (`tools/use-dwg-converter.mjs`, `packages/cad-viewer-example/e2e/tests/find-layouts.spec.ts`, `packages/cad-simple-ui-plugin/__tests__/findText.spec.ts`) — dirs `tools`, `e2e`, `__tests__` fora do grafo; estas três foram lidas directamente da fonte.

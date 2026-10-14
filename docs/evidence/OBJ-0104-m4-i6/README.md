@@ -1,6 +1,6 @@
 # OBJ-0104 · M4-I6 — Evidência de superfície real (desktop e 390px)
 
-Cards `t_8b6c66e1` / `t_dc4ed9f0` (rework da revisão `t_3172081b`). Decisão t_d2446cfc (arquitectura §7 item 6): a prova são **píxeis do compositor**, não `FakeView` nem asserções sobre o modelo.
+Tarefa interna / tarefa interna (rework da revisão tarefa interna). Decisão tarefa interna (arquitectura §7 item 6): a prova são **píxeis do compositor**, não `FakeView` nem asserções sobre o modelo.
 
 ## Método (caminho da app, não o do servidor isolado)
 
