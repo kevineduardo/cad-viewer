@@ -1,0 +1,103 @@
+Freedom DWG/CAD Viewer
+Copyright (C) 2026 Equipa Aitra
+PENDING: Titular do copyright da app por confirmar (decisão do Kevin; L1 §4).
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or (at your
+option) any later version. It is distributed WITHOUT ANY WARRANTY.
+Corresponding source: SOURCE_URL_PENDING
+
+Third-party components (full licence texts in third-party.json):
+
+- expo 57.0.28 - MIT
+  Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+  Project: https://github.com/expo/expo/tree/main/packages/expo
+- expo-crypto 57.0.4 - MIT
+  Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+  Project: https://docs.expo.dev/versions/latest/sdk/crypto/
+- react 19.2.3 - MIT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+  Project: https://react.dev/
+- react-native 0.86.3 - MIT
+  Copyright (c) Meta Platforms, Inc. and affiliates.
+  Project: https://reactnative.dev/
+- react-native-safe-area-context 5.7.0 - MIT
+  Copyright (c) 2019 Th3rd Wave
+  Project: https://github.com/AppAndFlow/react-native-safe-area-context
+- react-native-tcp-socket 6.4.3 - MIT
+  Copyright (c) 2019 Rapsssito
+  Project: https://github.com/Rapsssito/react-native-tcp-socket
+- react-native-webview 13.16.1 - MIT
+  Copyright (c) 2015-present, Facebook, Inc.
+  Project: https://github.com/react-native-webview/react-native-webview
+- @mlightcad/data-model 1.15.7 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+- @mlightcad/libredwg-converter 3.15.7 - GPL-3.0
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+  PENDING: O campo `license` do package.json declara GPL-3.0, mas o ficheiro LICENSE do mesmo tarball contém texto MIT: incoerência por esclarecer com o upstream. Aqui aplica-se a GPL-3.0 declarada.
+- @mlightcad/libredwg-web 0.8.0 - GPL-3.0
+  Copyright © Free Software Foundation, Inc.
+  Project: https://github.com/mlightcad/libredwg-web
+  Source: https://github.com/mlightcad/libredwg-web
+  PENDING: O tarball não inclui LICENSE nem AUTHORS: a linha exacta de copyright e a variante `GPL-3.0-only` vs `GPL-3.0-or-later` não foram confirmadas (L1 §6 #2).
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/common 1.15.7 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/geometry-engine 3.15.7 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/graphic-interface 3.15.7 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/mtext-parser 1.5.5 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/mtext-parser
+  Source: https://github.com/mlightcad/mtext-parser
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/mtext-renderer 0.13.4 - MIT
+  Copyright (c) 2026 mlightcad
+  Project: https://github.com/mlightcad/mtext-renderer
+  Source: https://github.com/mlightcad/mtext-renderer
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- @mlightcad/emf-converter 1.15.7 - Apache-2.0
+  Copyright (c) ChristopherVR and contributors (fork mantido por MLightCAD)
+  Project: https://github.com/mlightcad/realdwg-web
+  Source: https://github.com/mlightcad/realdwg-web
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- three 0.172.0 - MIT
+  Copyright © 2010-2024 three.js authors
+  Project: https://threejs.org/
+  Source: https://github.com/mrdoob/three.js
+  PENDING: Inclusão efectiva no bundle por confirmar (dependência transitiva; MANIFEST.json do bundle ausente).
+- LibreDWG (biblioteca C compilada para wasm em @mlightcad/libredwg-web) versão upstream não indicada no tarball - GPL-3.0 (variante por confirmar)
+  Copyright © Free Software Foundation, Inc.
+  Project: https://www.gnu.org/software/libredwg/
+  Source: https://github.com/LibreDWG/libredwg
+  Wasm package source: https://github.com/mlightcad/libredwg-web
+  PENDING: Linha exacta de copyright e variante `only`/`or-later` a copiar do LICENSE/AUTHORS do LibreDWG upstream (L1 §6 #2); o tarball do wasm não os inclui.
+  PENDING: Fonte correspondente exacta do wasm distribuído (commit/versão do LibreDWG usado na compilação) por confirmar; a ligação aponta para o projecto e para o repositório do wasm.
+- Restantes dependências de execução do app (package-lock.json) 491 pacotes - MIT 415, ISC 29, MPL-2.0 12, Apache-2.0 10, BSD-3-Clause 7, BlueOak-1.0.0 6, BSD-2-Clause 3, (MIT OR CC0-1.0) 2, Unlicense 2, (BSD-3-Clause OR GPL-2.0) 1, (MIT OR Apache-2.0) 1, 0BSD 1, CC-BY-4.0 1, Python-2.0 1
+  PENDING: Separação runtime vs build por concluir (L1 §6 #3): o inventário final deve sair do conteúdo do binário, não do lockfile.
+  PENDING: Pontos do L1 §2.1 por confirmar: MPL-2.0 (lightningcss*, ferramenta de build), (BSD-3-Clause OR GPL-2.0) em node-forge, CC-BY-4.0 em caniuse-lite, Apache-2.0 (NOTICE por pacote).
+- Fontes empacotadas (arquitectura §6.3) — - —
+  PENDING: À data deste inventário o bundle (packages/cad-mobile-viewer/dist/assets) não inclui ficheiros de fonte; a licença de cada fonte será registada quando existirem. Fonte sem licença conhecida não entra no bundle.
+
+Pending items:
+- URL público do código-fonte por definir (EXT-1).
+- viewer-bundle/MANIFEST.json é gerado no build do plugin e não existe neste checkout: as entradas do viewer derivam das dependências declaradas, não do conteúdo do bundle (L1 §6 #3).
+- Parecer jurídico GPL-3.0 × lojas (EXT-2): fora de âmbito; este ecrã não é aconselhamento jurídico.
+
+"DWG" is a file format; this app is not affiliated with Autodesk or mlightcad.
+This notice is informational and is not legal advice.

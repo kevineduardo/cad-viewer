@@ -1,0 +1,121 @@
+{
+  "$comment": "Espelho máquina-legível de docs/OBJ-0104-licenses.md (inventário L1), consumido por generate-licenses.mjs. Só factos com proveniência; o que não está provado vai em `pending`. Não é parecer jurídico.",
+  "gpl": {
+    "file": "assets/licenses/GPL-3.0.txt",
+    "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "origin": "https://www.gnu.org/licenses/gpl-3.0.txt"
+  },
+  "app": {
+    "name": "Freedom DWG/CAD Viewer",
+    "license": "GPL-3.0-or-later",
+    "copyright": "Copyright (C) 2026 Equipa Aitra",
+    "copyrightPending": "Titular do copyright da app por confirmar (decisão do Kevin; L1 §4).",
+    "sourceUrl": "SOURCE_URL_PENDING",
+    "sourceUrlPending": "URL público do código-fonte por definir (EXT-1)."
+  },
+  "viewerPackages": [
+    {
+      "name": "@mlightcad/data-model",
+      "version": "1.15.7",
+      "direct": true,
+      "textFrom": "root-license",
+      "note": "Texto MIT e copyright do LICENSE da raiz do monorepo (o tarball não traz LICENSE)."
+    },
+    {
+      "name": "@mlightcad/libredwg-converter",
+      "version": "3.15.7",
+      "direct": true,
+      "textFrom": "gpl",
+      "copyrightFromPackageLicense": true,
+      "pending": [
+        "O campo `license` do package.json declara GPL-3.0, mas o ficheiro LICENSE do mesmo tarball contém texto MIT: incoerência por esclarecer com o upstream. Aqui aplica-se a GPL-3.0 declarada."
+      ]
+    },
+    {
+      "name": "@mlightcad/libredwg-web",
+      "version": "0.8.0",
+      "direct": false,
+      "textFrom": "gpl",
+      "copyright": "Copyright © Free Software Foundation, Inc.",
+      "pending": [
+        "O tarball não inclui LICENSE nem AUTHORS: a linha exacta de copyright e a variante `GPL-3.0-only` vs `GPL-3.0-or-later` não foram confirmadas (L1 §6 #2)."
+      ]
+    },
+    {
+      "name": "@mlightcad/common",
+      "version": "1.15.7",
+      "direct": false,
+      "textFrom": "package"
+    },
+    {
+      "name": "@mlightcad/geometry-engine",
+      "version": "3.15.7",
+      "direct": false,
+      "textFrom": "package"
+    },
+    {
+      "name": "@mlightcad/graphic-interface",
+      "version": "3.15.7",
+      "direct": false,
+      "textFrom": "package"
+    },
+    {
+      "name": "@mlightcad/mtext-parser",
+      "version": "1.5.5",
+      "direct": false,
+      "textFrom": "package"
+    },
+    {
+      "name": "@mlightcad/mtext-renderer",
+      "version": "0.13.4",
+      "direct": false,
+      "textFrom": "root-license",
+      "note": "Texto MIT e copyright do LICENSE da raiz do monorepo (o tarball não traz LICENSE)."
+    },
+    {
+      "name": "@mlightcad/emf-converter",
+      "version": "1.15.7",
+      "direct": false,
+      "textFrom": "package",
+      "noticeFile": "NOTICE.md",
+      "copyright": "Copyright (c) ChristopherVR and contributors (fork mantido por MLightCAD)",
+      "note": "Fork de emf-converter 2.0.2 (Copyright (c) ChristopherVR and contributors, Apache-2.0); aviso no NOTICE.md do pacote."
+    },
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "direct": false,
+      "textFrom": "package"
+    }
+  ],
+  "libredwg": {
+    "name": "LibreDWG (biblioteca C compilada para wasm em @mlightcad/libredwg-web)",
+    "version": "versão upstream não indicada no tarball",
+    "license": "GPL-3.0 (variante por confirmar)",
+    "copyright": "Copyright © Free Software Foundation, Inc.",
+    "url": "https://www.gnu.org/software/libredwg/",
+    "sourceUrl": "https://github.com/LibreDWG/libredwg",
+    "wasmSourceUrl": "https://github.com/mlightcad/libredwg-web",
+    "pending": [
+      "Linha exacta de copyright e variante `only`/`or-later` a copiar do LICENSE/AUTHORS do LibreDWG upstream (L1 §6 #2); o tarball do wasm não os inclui.",
+      "Fonte correspondente exacta do wasm distribuído (commit/versão do LibreDWG usado na compilação) por confirmar; a ligação aponta para o projecto e para o repositório do wasm."
+    ]
+  },
+  "transitive": {
+    "name": "Restantes dependências de execução do app (package-lock.json)",
+    "pending": [
+      "Separação runtime vs build por concluir (L1 §6 #3): o inventário final deve sair do conteúdo do binário, não do lockfile.",
+      "Pontos do L1 §2.1 por confirmar: MPL-2.0 (lightningcss*, ferramenta de build), (BSD-3-Clause OR GPL-2.0) em node-forge, CC-BY-4.0 em caniuse-lite, Apache-2.0 (NOTICE por pacote)."
+    ]
+  },
+  "fonts": {
+    "name": "Fontes empacotadas (arquitectura §6.3)",
+    "pending": [
+      "À data deste inventário o bundle (packages/cad-mobile-viewer/dist/assets) não inclui ficheiros de fonte; a licença de cada fonte será registada quando existirem. Fonte sem licença conhecida não entra no bundle."
+    ]
+  },
+  "projectPending": [
+    "viewer-bundle/MANIFEST.json é gerado no build do plugin e não existe neste checkout: as entradas do viewer derivam das dependências declaradas, não do conteúdo do bundle (L1 §6 #3).",
+    "Parecer jurídico GPL-3.0 × lojas (EXT-2): fora de âmbito; este ecrã não é aconselhamento jurídico."
+  ]
+}
