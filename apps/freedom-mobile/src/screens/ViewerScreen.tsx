@@ -45,8 +45,13 @@ export {
 } from './viewerSession'
 
 export function ViewerScreen({
-  createServer = createNativeServer
-}: { createServer?: ServerFactory } = {}): ReactElement {
+  createServer = createNativeServer,
+  onViewerVersion
+}: {
+  createServer?: ServerFactory
+  /** Só leitura: `viewerVersion` do `ready` (null antes/depois de falhar). */
+  onViewerVersion?: (viewerVersion: string | null) => void
+} = {}): ReactElement {
   const [session, dispatch] = useReducer(sessionReducer, initialSessionState)
   /** Página da sessão (token): só em memória, nunca registada. */
   const [viewerUrl, setViewerUrl] = useState<string | null>(null)
@@ -80,6 +85,12 @@ export function ViewerScreen({
       void live.dispose()
     }
   }, [generation, createServer])
+
+  // Expõe o `viewerVersion` (Acerca); não influencia ponte, servidor nem sessão.
+  const { viewerVersion } = session.shell
+  useEffect(() => {
+    onViewerVersion?.(viewerVersion)
+  }, [viewerVersion, onViewerVersion])
 
   const onMessage = (raw: string) => {
     sessionRef.current?.receive(raw)

@@ -1,37 +1,90 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Conteúdo do ecrã Acerca/Licenças (arquitectura §8.2), transcrito do
-// inventário L1 (`docs/OBJ-0104-licenses.md`). Informativo: não é parecer
-// jurídico e não condiciona nenhum fluxo técnico (D-1). Itens ainda por
-// confirmar no L1 aparecem como tal, nunca como afirmação.
+// Conteúdo do ecrã Acerca/Licenças (arquitectura §8.2). Os créditos e o texto
+// GPL-3.0 NÃO são escritos aqui: vêm de `licenseData.generated.ts`, gerado por
+// `scripts/generate-licenses.mjs` a partir do inventário L1. Informativo: não
+// é parecer jurídico e não condiciona nenhum fluxo técnico (D-1). O que o
+// inventário não prova aparece como «pendente», nunca como afirmação.
+import {
+  APP_LICENSE_INFO,
+  GPL_3_0_TEXT,
+  PROJECT_PENDING,
+  THIRD_PARTY,
+  type ThirdPartyEntry
+} from './licenseData.generated.ts'
 
-export interface AboutItem {
-  readonly name: string
-  readonly license: string
-  readonly notice: string
-  readonly note?: string
-}
+export type { ThirdPartyEntry }
+export { GPL_3_0_TEXT, THIRD_PARTY }
 
 export interface AboutSection {
   readonly id: string
   readonly title: string
   readonly paragraphs: readonly string[]
-  readonly items?: readonly AboutItem[]
+  readonly items?: readonly ThirdPartyEntry[]
+  readonly notes?: readonly string[]
 }
 
-export const SOURCE_URL_PENDING = 'SOURCE_URL_PENDING'
+export interface AboutMeta {
+  readonly appVersion: string
+  /** `viewerVersion` do `ready` (null até o viewer estar pronto). */
+  readonly viewerVersion: string | null
+  /** SHA de build (`EXPO_PUBLIC_BUILD_SHA`); null se não definido. */
+  readonly buildSha: string | null
+}
+
+export interface AboutMetaRow {
+  readonly id: 'app-version' | 'viewer-version' | 'build-sha'
+  readonly label: string
+  readonly value: string
+}
+
+export const SOURCE_URL_PENDING = APP_LICENSE_INFO.sourceUrl
 
 export const ABOUT_TITLE = 'Acerca e licenças'
+export const APP_NAME = 'Freedom DWG/CAD Viewer'
 
 export const NOT_LEGAL_ADVICE =
   'Informação para transparência. Não constitui aconselhamento jurídico.'
+
+export const VIEWER_VERSION_WAITING = 'a aguardar o viewer (ainda não pronto)'
+export const BUILD_SHA_UNSET = 'não definido neste build'
+
+export const GPL_BUTTON_LABEL = 'Ver texto completo da GPL-3.0'
+export const GPL_VIEW_TITLE = 'GNU General Public License, versão 3'
+export const PENDING_PREFIX = 'Pendente: '
+
+/** Linhas «Acerca» (versão da app, `viewerVersion` do `ready`, SHA de build). */
+export function aboutMetaRows(meta: AboutMeta): readonly AboutMetaRow[] {
+  return [
+    { id: 'app-version', label: 'Versão da app', value: meta.appVersion },
+    {
+      id: 'viewer-version',
+      label: 'Versão do viewer',
+      value: meta.viewerVersion ?? VIEWER_VERSION_WAITING
+    },
+    {
+      id: 'build-sha',
+      label: 'Build (SHA)',
+      value: meta.buildSha ?? BUILD_SHA_UNSET
+    }
+  ]
+}
+
+/** Texto longo em parágrafos (separados por linha em branco) para o ecrã. */
+export function splitParagraphs(text: string): readonly string[] {
+  return text
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n/)
+    .map(p => p.replace(/\s+$/, ''))
+    .filter(p => p.trim().length > 0)
+}
 
 export const ABOUT_SECTIONS: readonly AboutSection[] = [
   {
     id: 'about',
     title: 'Acerca',
     paragraphs: [
-      'Freedom DWG/CAD Viewer — visualizador offline de DWG/DXF. Não envia ficheiros para nenhum serviço.'
+      `${APP_NAME} — visualizador offline de DWG/DXF; não envia ficheiros para nenhum serviço.`
     ]
   },
   {
@@ -39,56 +92,26 @@ export const ABOUT_SECTIONS: readonly AboutSection[] = [
     title: 'Licença desta app',
     paragraphs: [
       'Este programa é software livre: pode redistribuí-lo e/ou modificá-lo nos termos da GNU General Public License, versão 3 ou (à sua escolha) qualquer versão posterior, publicada pela Free Software Foundation.',
-      'É distribuído SEM QUALQUER GARANTIA. Licença declarada: GPL-3.0-or-later. Copyright (C) 2026 Equipa Aitra (titular por confirmar).'
-    ]
+      `É distribuído SEM QUALQUER GARANTIA. Licença declarada: ${APP_LICENSE_INFO.license}. ${APP_LICENSE_INFO.copyright}.`
+    ],
+    notes: [APP_LICENSE_INFO.copyrightPending]
   },
   {
     id: 'source',
     title: 'Código-fonte',
     paragraphs: [
-      `Código-fonte correspondente: ${SOURCE_URL_PENDING} (endereço público ainda por definir).`
-    ]
+      `Oferta de código-fonte correspondente: ${SOURCE_URL_PENDING}.`
+    ],
+    notes: [APP_LICENSE_INFO.sourceUrlPending]
   },
   {
     id: 'third-party',
     title: 'Créditos e avisos de terceiros',
     paragraphs: [
-      'Componentes de terceiros incluídos ou usados por esta app, conforme o inventário de licenças. Entradas marcadas "por confirmar" aguardam verificação.'
+      'Componentes de terceiros, gerados a partir do inventário de licenças do projecto. As entradas «Pendente» aguardam verificação e não são afirmações.'
     ],
-    items: [
-      {
-        name: 'mlightcad / cad-viewer (@mlightcad/*)',
-        license: 'MIT',
-        notice: 'Copyright (c) 2026 mlightcad'
-      },
-      {
-        name: 'LibreDWG (via @mlightcad/libredwg-web e libredwg-converter)',
-        license: 'GPL-3.0',
-        notice: 'Copyright (C) Free Software Foundation, Inc.',
-        note: 'Variante (only / or-later) e linha de copyright por confirmar.'
-      },
-      {
-        name: 'three.js',
-        license: 'MIT',
-        notice: 'Aviso de copyright dos autores de three.js'
-      },
-      {
-        name: 'React, React Native, Expo, expo-crypto',
-        license: 'MIT',
-        notice: 'Avisos de copyright dos respectivos autores'
-      },
-      {
-        name: 'react-native-webview, react-native-tcp-socket, react-native-safe-area-context',
-        license: 'MIT',
-        notice: 'Avisos de copyright dos respectivos autores'
-      },
-      {
-        name: 'Restantes dependências de execução',
-        license: 'Várias (MIT, ISC, BSD, Apache-2.0, …)',
-        notice: 'Conforme o inventário gerado',
-        note: 'Lista final por confirmar.'
-      }
-    ]
+    items: THIRD_PARTY,
+    notes: PROJECT_PENDING
   },
   {
     id: 'marks',

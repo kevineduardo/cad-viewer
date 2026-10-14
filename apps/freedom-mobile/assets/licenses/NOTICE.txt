@@ -88,7 +88,7 @@ Third-party components (full licence texts in third-party.json):
   Wasm package source: https://github.com/mlightcad/libredwg-web
   PENDING: Linha exacta de copyright e variante `only`/`or-later` a copiar do LICENSE/AUTHORS do LibreDWG upstream (L1 §6 #2); o tarball do wasm não os inclui.
   PENDING: Fonte correspondente exacta do wasm distribuído (commit/versão do LibreDWG usado na compilação) por confirmar; a ligação aponta para o projecto e para o repositório do wasm.
-- Restantes dependências de execução do app (package-lock.json) 491 pacotes - MIT 415, ISC 29, MPL-2.0 12, Apache-2.0 10, BSD-3-Clause 7, BlueOak-1.0.0 6, BSD-2-Clause 3, (MIT OR CC0-1.0) 2, Unlicense 2, (BSD-3-Clause OR GPL-2.0) 1, (MIT OR Apache-2.0) 1, 0BSD 1, CC-BY-4.0 1, Python-2.0 1
+- Restantes dependências de execução do app (package-lock.json) 491 pacotes (fecho das dependências de execução no lockfile) - MIT 415, ISC 29, MPL-2.0 12, Apache-2.0 10, BSD-3-Clause 7, BlueOak-1.0.0 6, BSD-2-Clause 3, (MIT OR CC0-1.0) 2, Unlicense 2, (BSD-3-Clause OR GPL-2.0) 1, (MIT OR Apache-2.0) 1, 0BSD 1, CC-BY-4.0 1, Python-2.0 1
   PENDING: Separação runtime vs build por concluir (L1 §6 #3): o inventário final deve sair do conteúdo do binário, não do lockfile.
   PENDING: Pontos do L1 §2.1 por confirmar: MPL-2.0 (lightningcss*, ferramenta de build), (BSD-3-Clause OR GPL-2.0) em node-forge, CC-BY-4.0 em caniuse-lite, Apache-2.0 (NOTICE por pacote).
 - Fontes empacotadas (arquitectura §6.3) — - —

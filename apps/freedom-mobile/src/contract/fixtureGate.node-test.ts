@@ -216,8 +216,14 @@ describe('fronteira offline do app (D-2…D-5, arquitectura §4 «Rede»)', () =
     }
   })
 
-  it('todo o URL literal é loopback', () => {
+  // Único ficheiro com URLs não loopback: atribuições de licenças (texto para
+  // o utilizador; abertas só por toque via `Linking`, nunca por código de rede).
+  // O teste de «APIs de rede» acima continua a varrê-lo.
+  const ATTRIBUTION_DATA = 'src/about/licenseData.generated.ts'
+
+  it('todo o URL literal é loopback (excepto os links de atribuição de licenças)', () => {
     for (const f of sources) {
+      if (relative(root, f) === ATTRIBUTION_DATA) continue
       const text = readFileSync(f, 'utf8')
       for (const m of text.matchAll(/\bhttps?:\/\/[^\s'"`)>]+/gi)) {
         assert.match(
@@ -227,6 +233,18 @@ describe('fronteira offline do app (D-2…D-5, arquitectura §4 «Rede»)', () =
         )
       }
     }
+  })
+
+  it('o ficheiro de atribuições é só dados exportados (sem imports nem chamadas)', () => {
+    const text = readFileSync(join(root, ATTRIBUTION_DATA), 'utf8')
+    assert.match(text, /^\/\/ SPDX-License-Identifier: GPL-3\.0-or-later/)
+    // Os textos de licença vão em strings JSON de uma só linha; código real
+    // começaria uma linha com `import`/`require` ou chamaria `fetch(`.
+    assert.doesNotMatch(text, /^\s*(import\b|const\s+\w+\s*=\s*require)/m)
+    assert.doesNotMatch(text, /\bfetch\s*\(|\bLinking\b/)
+    const topLevel = text.split('\n').filter(l => /^[A-Za-z]/.test(l))
+    assert.ok(topLevel.length > 0)
+    for (const l of topLevel) assert.match(l, /^export (interface|const)\b/, l)
   })
 
   it('sem parser proprietário nem conversor DWG no app (D-2)', () => {

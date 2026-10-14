@@ -19,6 +19,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -80,12 +81,41 @@ function storePackageDir(name, version) {
   return hit
 }
 
-function sortedDistribution(lock) {
+/** Pacotes do lockfile alcançáveis a partir das dependências de execução da app. */
+function runtimeClosure(lock, rootDeps) {
+  const pkgs = lock.packages
+  const resolve = (from, dep) => {
+    let base = from
+    for (;;) {
+      const key = `${base ? `${base}/` : ''}node_modules/${dep}`
+      if (pkgs[key]) return key
+      if (!base) return null
+      const i = base.lastIndexOf('/node_modules/')
+      base = i === -1 ? '' : base.slice(0, i)
+    }
+  }
+  const seen = new Set()
+  const queue = rootDeps.map(d => resolve('', d)).filter(Boolean)
+  while (queue.length) {
+    const key = queue.pop()
+    if (seen.has(key)) continue
+    seen.add(key)
+    const p = pkgs[key]
+    for (const dep of [
+      ...Object.keys(p.dependencies ?? {}),
+      ...Object.keys(p.optionalDependencies ?? {}),
+      ...Object.keys(p.peerDependencies ?? {})
+    ]) {
+      const next = resolve(key, dep)
+      if (next && !seen.has(next)) queue.push(next)
+    }
+  }
+  return [...seen].sort().map(k => pkgs[k])
+}
+
+function sortedDistribution(packages) {
   const counts = new Map()
-  let total = 0
-  for (const [key, v] of Object.entries(lock.packages)) {
-    if (!key) continue
-    total += 1
+  for (const v of packages) {
     const lic =
       typeof v.license === 'string'
         ? v.license
@@ -97,7 +127,10 @@ function sortedDistribution(lock) {
   const parts = [...counts.entries()].sort(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
   )
-  return { total, text: parts.map(([l, n]) => `${l} ${n}`).join(', ') }
+  return {
+    total: packages.length,
+    text: parts.map(([l, n]) => `${l} ${n}`).join(', ')
+  }
 }
 
 export function collect() {
@@ -216,10 +249,12 @@ export function collect() {
   })
 
   // 4. Restantes transitivos e fontes: sem fabricar listas.
-  const dist = sortedDistribution(lock)
+  const dist = sortedDistribution(
+    runtimeClosure(lock, Object.keys(appPkg.dependencies))
+  )
   entries.push({
     name: inv.transitive.name,
-    version: `${dist.total} pacotes`,
+    version: `${dist.total} pacotes (fecho das dependências de execução no lockfile)`,
     license: dist.text,
     copyright: null,
     url: null,

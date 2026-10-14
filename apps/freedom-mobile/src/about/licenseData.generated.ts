@@ -280,7 +280,7 @@ export const THIRD_PARTY: readonly ThirdPartyEntry[] = [
   },
   {
     "name": "Restantes dependências de execução do app (package-lock.json)",
-    "version": "491 pacotes",
+    "version": "491 pacotes (fecho das dependências de execução no lockfile)",
     "license": "MIT 415, ISC 29, MPL-2.0 12, Apache-2.0 10, BSD-3-Clause 7, BlueOak-1.0.0 6, BSD-2-Clause 3, (MIT OR CC0-1.0) 2, Unlicense 2, (BSD-3-Clause OR GPL-2.0) 1, (MIT OR Apache-2.0) 1, 0BSD 1, CC-BY-4.0 1, Python-2.0 1",
     "copyright": null,
     "url": null,

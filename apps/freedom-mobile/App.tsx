@@ -3,17 +3,21 @@ import { type ReactElement, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
+import appConfig from './app.json'
 import { AboutLicenses } from './src/about/AboutLicenses'
+import { readBuildSha } from './src/about/buildInfo'
 import { ViewerScreen } from './src/screens/ViewerScreen'
 
 export default function App(): ReactElement {
   // O ecrã Acerca é uma sobreposição: o viewer fica montado (sessão, servidor
   // e WebView intactos) e nenhum fluxo técnico depende dele.
   const [aboutOpen, setAboutOpen] = useState(false)
+  // `viewerVersion` do `ready`, só para mostrar no Acerca (setState estável).
+  const [viewerVersion, setViewerVersion] = useState<string | null>(null)
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
-        <ViewerScreen />
+        <ViewerScreen onViewerVersion={setViewerVersion} />
         {aboutOpen ? null : (
           <View style={{ position: 'absolute', top: 8, right: 16 }}>
             <Pressable
@@ -33,7 +37,12 @@ export default function App(): ReactElement {
           </View>
         )}
         {aboutOpen ? (
-          <AboutLicenses onClose={() => setAboutOpen(false)} />
+          <AboutLicenses
+            onClose={() => setAboutOpen(false)}
+            appVersion={appConfig.expo.version}
+            viewerVersion={viewerVersion}
+            buildSha={readBuildSha()}
+          />
         ) : null}
       </SafeAreaView>
     </SafeAreaProvider>
