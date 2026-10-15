@@ -9,7 +9,8 @@ export default {
     exportPdf: 'Exportovat do PDF',
     exportSvg: 'Exportovat do SVG',
     exportImage: 'Exportovat do obrázku',
-    about: 'O aplikaci'
+    about: 'O aplikaci',
+    offlineVersion: 'Offline verze'
   },
   ribbon: {
     tab: {
