@@ -87,10 +87,10 @@ export interface AcApOpenDatabaseOptions extends Omit<
    *   stays up until deferred text / INSERT glyph jobs finish
    *   ({@link AcTrView2d.isProcessingEntities}).
    * - `true`: entity conversion yields across event-loop turns so geometry
-   *   paints as batches land and the camera can reframe. The overlay hides
-   *   once entity convert finishes ({@link AcTrView2d.isConvertingEntities}).
-   *   Deferred text / INSERT glyph geometry may still finalize afterward, and
-   *   pan/zoom are already enabled.
+   *   paints as batches land and the camera can reframe. The canvas overlay
+   *   blocks the UI until FETCH_FILE + CONVERSION finish, then hides so
+   *   pan/zoom work while scene convert continues. The status bar tracks
+   *   parse/conversion progress and clears at CONVERSION `END`.
    *
    * Export / CLI completeness is not controlled by this flag. Callers that
    * need fully drawable text (HTML/PDF/PNG, headless scripts) still wait via
@@ -154,8 +154,10 @@ export interface AcApOpenDatabaseOptions extends Omit<
 
   /**
    * When `false`, disable cooperative `setTimeout` yields during entity
-   * convert. Headless Chromium scripts do not need a responsive UI and yields
-   * can inflate open wall time. Default `true` for interactive viewers.
+   * convert and skip non-progressive mid-open WebGL paints. Headless
+   * Chromium scripts do not need a responsive UI; yields and full-scene
+   * paints inflate open wall time. Default `true` for interactive viewers
+   * so "Rendering drawing ..." can still refresh the canvas (throttled).
    */
   cooperativeYield?: boolean
 }
