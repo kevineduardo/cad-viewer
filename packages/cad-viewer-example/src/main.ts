@@ -7,6 +7,7 @@ import { createApp } from 'vue'
 
 import App from './App.vue'
 import { registerLibreDwgConverter } from './registerLibreDwg'
+import { registerServiceWorker } from './serviceWorker'
 
 const initApp = () => {
   // Opt into GPL DWG support before the viewer mounts.
@@ -23,6 +24,8 @@ const initApp = () => {
   if (loader) {
     loader.style.display = 'none'
   }
+  // Precache the whole app (fonts, workers, wasm…) once the page is idle.
+  registerServiceWorker()
 }
 
 initApp()

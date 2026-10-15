@@ -98,24 +98,48 @@ export interface AcApFindResult {
 type EntityLike = any
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/** Block table record (layout or block definition) used by the search. */
+export interface AcApFindBlockRecordLike {
+  newIterator(): Iterable<EntityLike>
+  /** Used to resolve the matched entity for zoom extents. */
+  getIdAt?(id: string): EntityLike
+}
+
 /** Minimal database shape used by the search. */
 export interface AcApFindDatabaseLike {
   tables: {
     blockTable: {
       /** Block definition by name; used to search text inside blocks. */
       getAt?(name: string): { newIterator(): Iterable<EntityLike> } | undefined
-      getIdAt(id: string):
-        | {
-            newIterator(): Iterable<EntityLike>
-            /** Used to resolve the matched entity for zoom extents. */
-            getIdAt?(id: string): EntityLike
-          }
-        | undefined
+      getIdAt(id: string): AcApFindBlockRecordLike | undefined
+      /** All records; fallback for records `getIdAt` rejects. */
+      newIterator?(): Iterable<AcApFindBlockRecordLike & { objectId?: string }>
     }
     layerTable?: {
       getAt(name: string): { isOff?: boolean; isFrozen?: boolean } | undefined
     }
   }
+}
+
+/**
+ * Block table record with the given id.
+ *
+ * `blockTable.getIdAt` also requires the record's owner to be the block
+ * table. Some DWG files store `*MODEL_SPACE` with a wrong owner id, so
+ * `getIdAt` rejects it although it is in the table (and drawn); FIND would
+ * then never search model space. Fall back to the table's own records.
+ */
+export function acapGetFindBlockRecord(
+  db: AcApFindDatabaseLike,
+  id: string
+): AcApFindBlockRecordLike | undefined {
+  const table = db.tables.blockTable
+  const record = table.getIdAt(id)
+  if (record) return record
+  for (const candidate of table.newIterator?.() ?? []) {
+    if (candidate.objectId === id) return candidate
+  }
+  return undefined
 }
 
 const DIACRITICS = /[̀-ͯ]/g
@@ -303,7 +327,7 @@ export function acapFindTextInLayout(
   const result: AcApFindResult = { hits: [], truncated: false }
   if (!needle) return result
 
-  const btr = db.tables.blockTable.getIdAt(layoutBtrId)
+  const btr = acapGetFindBlockRecord(db, layoutBtrId)
   if (!btr) return result
 
   const layers = new Map<string, boolean>()
@@ -448,7 +472,7 @@ export function acapFindTextInLayout(
       if (table?.newIterator)
         return table as { newIterator(): Iterable<EntityLike> }
       const id = entity.dimBlockId
-      const byId = id ? db.tables.blockTable.getIdAt(id) : undefined
+      const byId = id ? acapGetFindBlockRecord(db, id) : undefined
       if (byId) return byId
       const name = entity.blockName
       return name ? db.tables.blockTable.getAt?.(name) : undefined

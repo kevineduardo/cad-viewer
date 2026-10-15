@@ -9,6 +9,16 @@
             </el-icon>
           </div>
           <div class="upload-hero-text">
+            <p class="upload-brand">
+              <img
+                class="upload-brand-logo"
+                :src="aitraLogo"
+                alt=""
+                width="20"
+                height="20"
+              />
+              <span>{{ t('example.fileUpload.brand') }}</span>
+            </p>
             <h1 class="upload-title">
             {{ t('example.fileUpload.title') }}
           </h1>
@@ -22,8 +32,28 @@
           <div ref="fileOpenHost" class="file-open-host"></div>
         </div>
 
-        <p class="font-cdn-notice">
-          {{ t('example.fileUpload.fontCdnNotice') }}
+        <p v-if="OFFLINE_VERSION_URL" class="upload-offline">
+          <a
+            class="offline-version-link"
+            :href="OFFLINE_VERSION_URL"
+            target="_blank"
+            rel="noopener"
+            >{{ t('example.fileUpload.offlineVersion') }}</a
+          >
+        </p>
+
+        <p class="upload-credit">
+          <!-- Offline: keep the attribution, without a link to the internet. -->
+          <span v-if="IS_OFFLINE_BUILD">{{
+            t('example.fileUpload.credit')
+          }}</span>
+          <a
+            v-else
+            href="https://github.com/mlightcad/cad-viewer"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ t('example.fileUpload.credit') }}</a
+          >
         </p>
       </div>
 
@@ -318,6 +348,9 @@ import { ElIcon } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import aitraLogo from '../assets/aitra-logo.png'
+import { IS_OFFLINE_BUILD, OFFLINE_VERSION_URL } from '../offline'
+
 interface Props {
   onFileSelect: (
     file: File,
@@ -395,6 +428,8 @@ const mountFileOpenPanel = () => {
     host: fileOpenHost.value,
     theme: 'light',
     showNewDrawing: true,
+    // Opening a drawing by URL needs the network.
+    showUrl: !IS_OFFLINE_BUILD,
     getSources: () => props.getCloudSources?.() ?? [],
     onLocalFile: file => {
       if (!isValidFile(file)) return
@@ -592,6 +627,41 @@ const isValidFile = (file: File): boolean => {
   min-width: 0;
 }
 
+.upload-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #0f1720;
+}
+
+.upload-brand-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.upload-credit {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.upload-credit a,
+.upload-credit span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #475569;
+}
+
+.upload-credit a {
+  text-decoration: underline;
+}
+
 .upload-title {
   margin: 0;
   font-size: 17px;
@@ -608,15 +678,19 @@ const isValidFile = (file: File): boolean => {
   line-height: 1.35;
 }
 
-.font-cdn-notice {
-  margin: 12px 0 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #92400e;
-  font-size: 11px;
-  line-height: 1.45;
+.upload-offline {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.offline-version-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: #0f1720;
+  text-decoration: underline;
 }
 
 .upload-actions {

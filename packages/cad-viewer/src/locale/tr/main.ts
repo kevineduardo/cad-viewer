@@ -9,7 +9,8 @@ export default {
     exportPdf: 'PDF\'e Dışa Aktar',
     exportSvg: 'SVG\'e Dışa Aktar',
     exportImage: 'Görüntüye Dışa Aktar',
-    about: 'Hakkında'
+    about: 'Hakkında',
+    offlineVersion: 'Çevrimdışı sürüm'
   },
   ribbon: {
     tab: {
