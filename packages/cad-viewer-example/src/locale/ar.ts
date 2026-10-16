@@ -12,7 +12,6 @@ export default {
 
   example: {
     fileUpload: {
-      brand: 'Aitra CadViewer',
       credit: 'مبني على المشروع مفتوح المصدر mlightcad/cad-viewer',
       title: 'اختر ملف CAD لعرضه',
       subtitle: 'استورد رسومات DWG أو DXF إلى العارض',

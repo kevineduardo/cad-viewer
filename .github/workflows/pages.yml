@@ -1,8 +1,8 @@
-name: Aitra CadViewer Pages
+name: CadViewer Pages
 
 # Fork-only: publishes the cad-viewer example app (with the single-file
 # offline download under /offline/) to GitHub Pages as an alternative to
-# cadviewer.aitra.pt for networks that block custom domains.
+# the self-hosted deployment for networks that block custom domains.
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: aitra-pages
+  group: pages
   cancel-in-progress: true
 
 jobs:

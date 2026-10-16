@@ -533,8 +533,8 @@ async function main() {
         log(`  FIND "Quadro": ${rows} result(s)`)
       }
       if (fixture === 'find-blocks.dxf') {
-        const rows = await find(page, 'Aitra')
-        log(`  FIND "Aitra": ${rows} result(s)`)
+        const rows = await find(page, 'Escola')
+        log(`  FIND "Escola": ${rows} result(s)`)
       }
     })
   }

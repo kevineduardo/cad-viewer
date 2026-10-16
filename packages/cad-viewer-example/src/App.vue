@@ -31,6 +31,10 @@
         :offline-version-url="OFFLINE_VERSION_URL"
       />
     </div>
+
+    <p v-if="IS_OFFLINE_BUILD" class="offline-attribution">
+      Disponibilizado e adaptado por Kevin Souza
+    </p>
   </div>
 </template>
 
@@ -435,6 +439,19 @@ const handleNewDrawing = (
 #app-root {
   height: 100vh;
   position: fixed;
+}
+
+.offline-attribution {
+  position: fixed;
+  right: 10px;
+  bottom: 30px;
+  z-index: 3000;
+  margin: 0;
+  font-size: 11px;
+  color: #fff;
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
 }
 
 .upload-screen {
