@@ -116,6 +116,8 @@ const URL_ALLOWLIST = [
   /^https:\/\/mlightcad\.com\/cad-viewer\/docs\/$/,
   /^https:\/\/mlightcad\.com\/dwg-parser\.html$/,
   /^https:\/\/github\.com\/mlightcad\/cad-viewer$/,
+  // Source-code URL shown as text in the licenses panel (GPL-3.0 notice).
+  /^https:\/\/github\.com\/kevineduardo\/cad-viewer$/,
   // Text only: console warnings/errors of Vue, Element Plus, opentype.js and
   // iconv-lite, and the "Producer" string pdf-lib writes into exported PDFs.
   /^https:\/\/vuejs\.org\/error-reference\/#runtime-\$\{\w+$/,

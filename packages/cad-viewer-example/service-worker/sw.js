@@ -12,8 +12,9 @@
  * - activate: deletes caches of other versions and claims the open pages.
  * - fetch: the app page (navigation) is network-first with a timeout and the
  *   cached index.html as fallback; every other same-origin GET/HEAD is
- *   served from the caches first, then from the network. dist/offline/ and
- *   other origins are never intercepted.
+ *   served from the caches first, then from the network. dist/offline/
+ *   (with or without the trailing slash) and other origins are never
+ *   intercepted.
  * - updates: the first version activates right away. Later versions wait
  *   (the open page keeps the assets of its own build) until the old pages are
  *   gone, or until the only open page already runs the new build.
@@ -225,7 +226,8 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' && request.method !== 'HEAD') return
   const url = new URL(request.url)
   if (url.origin !== SCOPE_URL.origin) return
-  if (url.pathname.startsWith(OFFLINE_DOWNLOAD_PATH)) return
+  // `/offline` (no slash) too: the server redirects it to the download page.
+  if ((url.pathname + '/').startsWith(OFFLINE_DOWNLOAD_PATH)) return
   if (url.pathname === new URL(self.location.href).pathname) return
   const page = url.origin + url.pathname
   const isAppPage = page === SCOPE_URL.href || page === INDEX_URL

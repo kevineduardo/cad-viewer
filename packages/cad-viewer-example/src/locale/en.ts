@@ -17,6 +17,16 @@ export default {
       subtitle: 'Import DWG or DXF drawings into the viewer',
       offlineVersion:
         'Offline version: download the viewer to use it without internet',
+      licenses: {
+        title: 'Licenses · commercial use allowed',
+        commercial: 'Commercial use is allowed, including inside companies.',
+        modifications: 'Modifications by Kevin Souza',
+        dwgReader: 'DWG reader (LibreDWG)',
+        gplNote:
+          'Because the DWG reader is GPL-3.0, whoever redistributes this app must keep these licenses and offer the source code:',
+        fonts:
+          'CAD fonts and templates come from mlightcad/cad-data, under their authors\' terms.'
+      },
       newDrawing: 'New Drawing',
       or: 'or',
       dropFile: 'Drop file or',

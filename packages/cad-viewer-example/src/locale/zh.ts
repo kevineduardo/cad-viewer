@@ -16,6 +16,16 @@ export default {
       title: '选择要查看的 CAD 文件',
       subtitle: '将 DWG 或 DXF 图纸导入查看器',
       offlineVersion: '离线版：下载查看器，无需联网即可使用',
+      licenses: {
+        title: '许可证 · 允许商业使用',
+        commercial: '允许商业使用，包括在企业内部使用。',
+        modifications: 'Kevin Souza 的修改',
+        dwgReader: 'DWG 读取器 (LibreDWG)',
+        gplNote:
+          '由于 DWG 读取器采用 GPL-3.0，再分发本应用时须保留这些许可证并提供源代码：',
+        fonts:
+          'CAD 字体和模板来自 mlightcad/cad-data，遵循其作者的条款。'
+      },
       newDrawing: '新建图纸',
       or: '或',
       dropFile: '拖放文件或',

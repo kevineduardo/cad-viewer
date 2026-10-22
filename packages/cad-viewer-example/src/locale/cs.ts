@@ -17,6 +17,16 @@ export default {
       subtitle: 'Importujte výkresy DWG nebo DXF do prohlížeče',
       offlineVersion:
         'Offline verze: stáhněte si prohlížeč a používejte jej bez internetu',
+      licenses: {
+        title: 'Licence · komerční použití povoleno',
+        commercial: 'Komerční použití je povoleno, včetně použití ve firmách.',
+        modifications: 'Úpravy od Kevina Souzy',
+        dwgReader: 'Čtečka DWG (LibreDWG)',
+        gplNote:
+          'Protože čtečka DWG je pod GPL-3.0, kdo tuto aplikaci dále šíří, musí zachovat tyto licence a nabídnout zdrojový kód:',
+        fonts:
+          'CAD písma a šablony pocházejí z mlightcad/cad-data a řídí se podmínkami jejich autorů.'
+      },
       newDrawing: 'Nový výkres',
       or: 'nebo',
       dropFile: 'Přetáhněte soubor nebo',

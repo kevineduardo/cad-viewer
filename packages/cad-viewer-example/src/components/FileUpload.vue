@@ -45,6 +45,34 @@
             >{{ t('example.fileUpload.credit') }}</a
           >
         </p>
+
+        <details class="upload-licenses">
+          <summary>{{ t('example.fileUpload.licenses.title') }}</summary>
+          <p class="license-commercial">
+            {{ t('example.fileUpload.licenses.commercial') }}
+          </p>
+          <ul class="license-list">
+            <li v-for="item in licenseItems" :key="item.name">
+              <span>{{ item.name }}</span>
+              <strong>{{ item.license }}</strong>
+            </li>
+          </ul>
+          <p class="license-note">
+            {{ t('example.fileUpload.licenses.gplNote') }}
+            <!-- Offline: no links to the internet. -->
+            <template v-if="IS_OFFLINE_BUILD">{{ SOURCE_CODE_URL }}</template>
+            <a
+              v-else
+              :href="SOURCE_CODE_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ SOURCE_CODE_URL }}</a
+            >
+          </p>
+          <p class="license-note">
+            {{ t('example.fileUpload.licenses.fonts') }}
+          </p>
+        </details>
       </div>
 
       <section
@@ -396,6 +424,21 @@ interface Props {
 const props = defineProps<Props>()
 const { t } = useI18n({ useScope: 'global' })
 
+/** Source code of this build, offered to meet the GPL-3.0 terms. */
+const SOURCE_CODE_URL = 'https://github.com/kevineduardo/cad-viewer'
+
+/** Licenses of the code bundled in this app (online and offline builds). */
+const licenseItems = computed(() => [
+  { name: 'CadViewer (mlightcad/cad-viewer)', license: 'MIT' },
+  { name: t('example.fileUpload.licenses.modifications'), license: 'MIT' },
+  {
+    name: t('example.fileUpload.licenses.dwgReader'),
+    license: 'GPL-3.0'
+  },
+  { name: 'Vue, Element Plus, three.js, pdf-lib', license: 'MIT' },
+  { name: 'pdf.js', license: 'Apache-2.0' }
+])
+
 const fileOpenHost = ref<HTMLElement | null>(null)
 let fileOpenPanel: AcUiFileOpenPanel | null = null
 
@@ -632,6 +675,56 @@ const isValidFile = (file: File): boolean => {
 
 .upload-credit a {
   text-decoration: underline;
+}
+
+.upload-licenses {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.upload-licenses summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.license-commercial {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.license-list {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.license-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.license-list strong {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.license-note {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.license-note a {
+  color: #475569;
 }
 
 .upload-title {

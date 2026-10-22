@@ -16,6 +16,16 @@ export default {
       title: 'اختر ملف CAD لعرضه',
       subtitle: 'استورد رسومات DWG أو DXF إلى العارض',
       offlineVersion: 'النسخة دون اتصال: نزّل العارض لاستخدامه بدون إنترنت',
+      licenses: {
+        title: 'التراخيص · الاستخدام التجاري مسموح',
+        commercial: 'الاستخدام التجاري مسموح، بما في ذلك داخل الشركات.',
+        modifications: 'تعديلات Kevin Souza',
+        dwgReader: 'قارئ DWG ‏(LibreDWG)',
+        gplNote:
+          'بما أن قارئ DWG مرخّص بـ GPL-3.0، فعلى من يعيد توزيع هذا التطبيق الإبقاء على هذه التراخيص وإتاحة الشيفرة المصدرية:',
+        fonts:
+          'خطوط CAD والقوالب مصدرها mlightcad/cad-data وتخضع لشروط مؤلفيها.'
+      },
       newDrawing: 'رسم جديد',
       or: 'أو',
       dropFile: 'أسقط الملف هنا أو',

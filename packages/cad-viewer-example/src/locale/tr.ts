@@ -17,6 +17,16 @@ export default {
       subtitle: 'DWG veya DXF çizimlerini görüntüleyiciye aktarın',
       offlineVersion:
         'Çevrimdışı sürüm: görüntüleyiciyi indirip internetsiz kullanın',
+      licenses: {
+        title: 'Lisanslar · ticari kullanım serbest',
+        commercial: 'Şirket içi kullanım dahil ticari kullanım serbesttir.',
+        modifications: 'Kevin Souza\'nın değişiklikleri',
+        dwgReader: 'DWG okuyucu (LibreDWG)',
+        gplNote:
+          'DWG okuyucu GPL-3.0 olduğundan, bu uygulamayı yeniden dağıtan kişi bu lisansları korumalı ve kaynak kodunu sunmalıdır:',
+        fonts:
+          'CAD yazı tipleri ve şablonları mlightcad/cad-data deposundan gelir ve yazarlarının koşullarına tabidir.'
+      },
       newDrawing: 'Yeni Çizim',
       or: 'veya',
       dropFile: 'Dosyayı bırakın veya',
